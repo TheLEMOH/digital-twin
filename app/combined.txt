@@ -1,0 +1,3931 @@
+﻿Название файла
+app.config.ts
+export default defineAppConfig({
+    ui: {
+        colors: {
+            primary: 'blue'
+        },
+        card: {
+            slots: {
+                root: 'flex flex-col',
+                body: 'p-0 sm:p-0 grow',
+            },
+        }
+    }
+})
+
+Название файла
+app.vue
+<script setup lang="ts">
+import { ru } from '@nuxt/ui/runtime/locale/index.js';
+import Loading from './components/Loading/components/Loading.vue';
+import useVisibleLayers from './composables/useVisibleLayer';
+import useLoading from './composables/useLoading';
+
+const {
+  selectedIndicator,
+  selectedDates,
+  selectedDate,
+  isOpenDialog,
+  isOpenDialogGFS,
+  selectedFeature,
+  isOpenSidebar,
+  gfsData,
+  selectedHeight,
+  selectedSubstrate } = useGeneral()
+
+const {
+  visibleFill,
+  visibleFillExtrusion,
+  visibleVoronoi,
+  visibleDeckGL,
+  visbileHill } = useVisibleLayers()
+
+const { loading } = useLoading()
+/* Выбранные объекты */
+provide('selectedDates', selectedDates)
+provide('selectedDate', selectedDate)
+provide('selectedHeight', selectedHeight)
+provide('selectedFeature', selectedFeature)
+provide('selectedSubstrate', selectedSubstrate)
+provide('selectedIndicator', selectedIndicator)
+
+/* Модальные окна и панели */
+provide('isOpenDialog', isOpenDialog)
+provide('isOpenDialogGFS', isOpenDialogGFS)
+provide('isOpenSidebar', isOpenSidebar)
+
+/* Видимость слоев */
+provide('visibleFill', visibleFill)
+provide('visibleFillExtrusion', visibleFillExtrusion)
+provide('visibleVoronoi', visibleVoronoi)
+provide('visibleDeckGL', visibleDeckGL)
+provide('visbileHill', visbileHill)
+
+/* Иное */
+provide('gfsData', gfsData)
+provide('loading', loading)
+
+const config = useAppConfig()
+
+</script>
+
+<template>
+  <UApp :locale="ru">
+    <NuxtLayout>
+      <Loading></Loading>
+      <NuxtPage></NuxtPage>
+    </NuxtLayout>
+  </UApp>
+</template>
+
+<style>
+body {
+  background: oklch(0.98 0.005 240);
+  padding: 0;
+  margin: 0;
+}
+
+#opacity-control {
+  width: 115px;
+  padding: 10px 0 10px 10px
+}
+
+#opacity-control hr {
+  margin: 5px 10px 5px 0
+}
+
+#opacity-control input[type=checkbox],
+#opacity-control input[type=radio] {
+  margin-right: 5px
+}
+
+#opacity-control input[type=range] {
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0);
+  width: 125px;
+  height: 10px;
+  margin: 0;
+  border: none;
+  padding: 1px 2px;
+  border-radius: 30px;
+  background: #f1f0ee;
+  outline: none
+}
+
+#opacity-control input[type=range]::-ms-track {
+  border: inherit;
+  color: transparent;
+  background: transparent
+}
+
+#opacity-control input[type=range]::-ms-fill-lower,
+#opacity-control input[type=range]::-ms-fill-upper {
+  background: transparent
+}
+
+#opacity-control input[type=range]::-ms-tooltip {
+  display: none
+}
+
+#opacity-control input[type=range]::-ms-thumb {
+  width: 15px;
+  height: 18px;
+  border-radius: 12px;
+  border: 0;
+  background-image: linear-gradient(to bottom, #1253a4 0, #1253a4)
+}
+
+.maplibregl-ctrl-bottom-right {
+  display: none !important;
+}
+</style>
+
+Название файла
+Line.vue
+<script setup>
+import * as echarts from 'echarts/core';
+import { GridComponent, TooltipComponent, MarkLineComponent } from 'echarts/components';
+import { LineChart } from 'echarts/charts';
+import { UniversalTransition } from 'echarts/features';
+import { CanvasRenderer } from 'echarts/renderers';
+
+echarts.use([GridComponent, LineChart, CanvasRenderer, MarkLineComponent, UniversalTransition, TooltipComponent]);
+
+const { series } = defineProps(['series'])
+
+const ctx = useTemplateRef('chart')
+
+onMounted(() => {
+    const myChart = echarts.init(ctx.value);
+
+    const option = {
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow'
+            }
+        },
+        grid: {
+            left: '10px',
+            right: '0px',
+            top: '20px',
+            bottom: '0px',
+            show: false,
+            lineStyle: {
+                color: '#e0e0e0',
+                width: 1,
+                type: 'solid'
+            }
+        },
+        xAxis: {
+            type: 'time',
+        },
+        yAxis: [
+            {
+                type: 'value',
+                splitLine: {
+                    show: false,
+                }
+            },
+        ],
+        series: series
+    };
+
+    myChart.setOption(option)
+
+    watch(() => series, (value) => {
+
+        const yAxis = value.map(v => {
+            return {
+                type: 'value',
+                splitLine: {
+                    show: false,
+                }
+            }
+        })
+
+        option.yAxis = yAxis
+
+        myChart.setOption({ ...option, ...yAxis, series: value }, true)
+    })
+
+    window.addEventListener('resize', function () {
+        myChart.resize();
+    });
+})
+
+</script>
+
+<template>
+    <div class="chart" ref="chart"></div>
+</template>
+
+<style scoped>
+.chart {
+    width: 100%;
+    height: 100%;
+}
+</style>
+
+Название файла
+LineGFS.vue
+<script setup>
+import * as echarts from 'echarts/core';
+import { GridComponent, TooltipComponent, MarkLineComponent, LegendComponent, TitleComponent } from 'echarts/components';
+import { LineChart } from 'echarts/charts';
+import { UniversalTransition } from 'echarts/features';
+import { CanvasRenderer } from 'echarts/renderers';
+
+echarts.use([TitleComponent, GridComponent, LineChart, CanvasRenderer, LegendComponent, UniversalTransition, TooltipComponent, MarkLineComponent]);
+
+const { series } = defineProps(['series'])
+
+const ctx = useTemplateRef('chart')
+
+onMounted(() => {
+    const myChart = echarts.init(ctx.value);
+
+    const option = {
+        tooltip: {
+            trigger: 'axis',
+
+        },
+        grid: {
+            left: '10px',
+            right: '0px',
+            top: '10px',
+            bottom: '0px',
+        },
+        xAxis: {
+            splitLine: {
+                lineStyle: {
+                    color: '#ffffff'
+                }
+            },
+            axisLine: {
+                lineStyle: {
+                    color: '#ffffff'
+                }
+            },
+            type: 'value',
+        },
+        yAxis: {
+            splitLine: {
+                lineStyle: {
+                    color: '#ffffff'
+                }
+            },
+            axisLine: {
+                lineStyle: {
+                    color: '#ffffff'
+                }
+            },
+
+            type: 'value'
+        },
+        series: series
+    };
+
+    myChart.setOption(option)
+
+    watch(() => series, (value) => {
+        myChart.setOption({ series: value })
+    })
+
+    window.addEventListener('resize', function () {
+        myChart.resize();
+    });
+})
+
+
+
+</script>
+
+<template>
+    <div class="chart" ref="chart"></div>
+</template>
+
+<style scoped>
+.chart {
+    width: 100%;
+    height: 100%;
+}
+</style>
+
+Название файла
+Dialog.vue
+<script setup lang="js">
+import Line from '~/components/Chart/components/LineGFS.vue';
+import useDialog from '../composables/useDialog';
+import IndicatorsList from '~/components/Indicator/components/IndicatorsList.vue';
+
+const isOpen = inject('isOpenDialogGFS')
+const gfsData = inject('gfsData')
+
+const { chartData, indicators } = useDialog()
+
+</script>
+
+<template>
+    <UModal fullscreen :title="'Данные GFS'" v-model:open="isOpen">
+        <template #body>
+            <div class="dialog">
+                <div class="chart-wrapper">
+                    <Line :series="chartData['temp']"></Line>
+                    <Line :series="chartData['temp']"></Line>
+                </div>
+                <div class="wrapper">
+                    <IndicatorsList :items="indicators"></IndicatorsList>
+                </div>
+            </div>
+        </template>
+    </UModal>
+</template>
+
+<style scoped>
+.wrapper {
+    background: var(--ui-color-neutral-950);
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+
+.chart-wrapper {
+    background: var(--ui-color-neutral-950);
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 6px;
+    display: flex;
+    gap: 0.5rem;
+}
+
+
+.dialog {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    grid-template-rows: 1fr;
+    height: 500px;
+    gap: 0.5rem;
+}
+</style>
+
+Название файла
+transform.ts
+export enum Indicators {
+    temp = "temp",
+    press = "prmsl",
+    gust = "gust",
+    ugrd = "ugrd",
+    vgrd = "vgrd",
+}
+
+export const dataExtremes: { [x: string]: [number, number] } = {
+    [Indicators.temp]: [-100, 70],
+    [Indicators.press]: [85000 / 133.332, 109000 / 133.332],
+    [Indicators.gust]: [0, 200],
+    [Indicators.ugrd]: [-100, 100],
+    [Indicators.vgrd]: [-100, 100],
+};
+
+export const from255 = (value: number, indicator: Indicators) =>
+    (value * (dataExtremes[indicator][1] - dataExtremes[indicator][0])) / 255 + dataExtremes[indicator][0];
+
+Название файла
+useDialog.js
+import { calculateWind } from "~/core/wind/calculateWind";
+import { from255 } from "./transform"
+
+function pressureToAltitude(pressureHPa, seaLevelPressure = 1013.25) {
+    const altitude = 44330 * (1 - Math.pow(pressureHPa / seaLevelPressure, 1 / 5.255));
+    return Math.ceil(altitude);
+}
+
+export default function useDialog() {
+    const gfsData = inject('gfsData')
+    const chartData = shallowRef({})
+
+    const indicators = computed(() => {
+        return [
+            {
+                name: 'Температура'
+            },
+            {
+                name: 'Давление'
+            }
+        ]
+    })
+
+    watch(gfsData, (data) => {
+        const temp = { data: [], type: 'line', name: 'Температура', showSymbol: false }
+
+        const uC = []
+        const vC = []
+
+        for (let i in data) {
+            const value = data[i]
+            const indicator = i.split("_")
+            const h = pressureToAltitude(indicator[1].slice(0, -2))
+
+            const transformvalue = from255(value, indicator[0])
+
+            if (indicator[1].includes('mb'))
+                switch (indicator[0]) {
+                    case 'temp':
+                        temp.data.push([transformvalue, h])
+                        break;
+                    case 'ugrd':
+                        uC.push([transformvalue, h])
+                        break;
+                    case 'vgrd':
+                        vC.push([transformvalue, h])
+                        break;
+                }
+        }
+
+        uC.map((u, i) => {
+            const v = vC[i]
+
+            const wind = calculateWind(u[0], v[0])
+
+            return wind
+        })
+
+
+        chartData.value['temp'] = temp
+    })
+
+    return { chartData, indicators }
+}
+
+Название файла
+Header.vue
+<script lang="ts">
+
+</script>
+
+<template>
+    <header>
+        <h1 class="text-xl font-semibold text-foreground">Система мониторинга г. Красноярска</h1>
+        <p class="text-sm">Оперативный мониторинг состояния приземного слоя атмосферы</p>
+    </header>
+</template>
+
+<style scoped>
+header {
+    background: #fff;
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+}
+</style>
+
+Название файла
+Indicators.vue
+<script setup lang="ts">
+import type Indicator from '~/types/indicator';
+
+interface Props {
+    items: Indicator[]
+}
+
+const { items } = defineProps<Props>()
+
+const selectedIndicator = inject<Indicator>('selectedIndicator')
+
+</script>
+
+<template>
+    <div class="indicators">
+        <template v-for="item in items">
+            <div :class="['indicator', selectedIndicator?.code == item.code ? 'selected-indicator' : '']"
+                @click="selectedIndicator = item">
+                <span>{{ item.name }} ({{ item.units }})</span>
+            </div>
+        </template>
+    </div>
+</template>
+
+<style scoped>
+.indicators {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    bottom: 58px;
+    z-index: 2;
+    padding: 0.5rem;
+    gap: 5px;
+}
+
+.indicator {
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border-radius: 12px;
+    padding: 0 1rem 0 1rem;
+    transition: background 0.2s;
+
+}
+
+.selected-indicator {
+    background-color: var(--ui-color-secondary-500) !important;
+}
+
+.indicator:hover {
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.7);
+}
+</style>
+
+Название файла
+IndicatorsList.vue
+<script setup lang="ts">
+import type Indicator from '~/types/indicator';
+
+interface Props {
+    items: Indicator[] | undefined
+    selectedIndicator: string[]
+}
+
+const { items, selectedIndicator } = defineProps<Props>()
+
+const emits = defineEmits(['select-indicator'])
+
+const groupItems = computed(() => {
+    return items?.map(item => {
+        return {
+            label: `${item.name}` || `Не указано`,
+            meaning: `${item.value}`,
+            value: item.code
+        }
+    })
+})
+
+const value = computed({
+    get() {
+        return selectedIndicator
+    },
+
+    set(v) {
+        if (v.length > 0)
+            emits('select-indicator', v)
+    }
+})
+
+</script>
+
+<template>
+    <div class="indicators">
+        <h2>Показатели</h2>
+        <UCheckboxGroup v-model="value" :items="groupItems">
+            <template #label="{ item }">
+                <div class="flex justify-between">
+                    <span>{{ item.label }}</span>
+                    <span>{{ item.meaning }}</span>
+                </div>
+            </template>
+        </UCheckboxGroup>
+    </div>
+</template>
+
+<style scoped>
+.indicators {
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+    gap: 5px;
+}
+</style>
+
+Название файла
+useIndicators.js
+export default function useIndicators() {
+
+}
+
+Название файла
+Legend.vue
+<script setup lang="ts">
+import useLegend from '../composables/useLegend';
+
+const scheme: Ref<[number, string]> = useLegend()
+
+</script>
+
+<template>
+    <div class="legend">
+        <template v-for="(item, index) in scheme">
+            <div class="legend-item" v-if="index % 2 == 0">
+                <div class="color" :style="{ background: scheme[index + 1] }"></div>
+                {{ scheme[index] }}
+            </div>
+        </template>
+    </div>
+
+</template>
+
+<style scoped>
+.color {
+    width: 15px;
+    height: 15px;
+}
+
+.legend-item {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.legend {
+    color: #ffffff;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    padding: 5px;
+    margin: 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+    bottom: 58px;
+    right: 0px;
+}
+</style>
+
+Название файла
+useLegend.ts
+import colorer from "~/core/colorer"
+import type Indicator from "~/types/indicator"
+
+export default function useLegend() {
+    const selectedIndicator = inject<Ref<Indicator>>('selectedIndicator')!
+
+    const scheme = ref<Ref<[number, string]>>(colorer.getScheme(selectedIndicator?.value.code))
+
+    watch(selectedIndicator,
+        (indicator) => {
+            scheme.value = colorer.getScheme(indicator.code)
+        },
+        { immediate: true }
+    )
+
+    return scheme
+}
+
+Название файла
+Loading.vue
+<script setup lang="ts">
+import useLoading from '../composables/useLoading';
+
+const { open } = useLoading()
+
+</script>
+
+<template>
+    <Transition name="fade">
+        <div class="loading" v-if="open">
+            <div class="loading-content">
+                <UIcon name="i-lucide-loader-circle" class="size-10 spinner" />
+                <span>Загрузка приложения...</span>
+            </div>
+        </div>
+    </Transition>
+</template>
+
+<style scoped>
+.loading {
+    position: absolute;
+    height: 100vh;
+    width: 100vw;
+    background: var(--ui-bg);
+    z-index: 3;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.5s ease;
+}
+
+.fade-enter-from {
+    opacity: 0;
+}
+
+.fade-leave-to {
+    opacity: 0;
+}
+
+.spinner {
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+</style>
+
+Название файла
+Progress.vue
+<script setup lang="ts">
+const value = ref(null)
+</script>
+
+<template>
+    <UProgress v-model="value" :size="'xs'" class="myProgress" />
+</template>
+
+<style>
+.myProgress {
+    position: absolute;
+    z-index: 4;
+}
+</style>
+
+Название файла
+useLoading.ts
+export default function useLoading() {
+    const open = ref<boolean>(true)
+
+    setTimeout(() => {
+        open.value = false
+    }, 2000);
+
+    return { open }
+}
+
+Название файла
+Map.vue
+<script setup lang="js">
+import "maplibre-gl/dist/maplibre-gl.css";
+
+</script>
+
+<template>
+    <div id="map" class="map"></div>
+</template>
+
+<style scoped>
+.map {
+    width: 100%;
+    height: 100%;
+}
+</style>
+
+Название файла
+control.ts
+import { IControl, Map as MapLibreMap, MapMouseEvent } from "maplibre-gl";
+
+interface RotateControlOptions {
+    bearingSpeed?: number;
+    pitchSpeed?: number;
+}
+
+export class RotateControl implements IControl {
+    private _container: HTMLElement | null = null;
+    private _map?: MapLibreMap;
+    private _bearingSpeed: number;
+    private _pitchSpeed: number;
+
+    constructor(options?: RotateControlOptions) {
+        this._bearingSpeed = options?.bearingSpeed || 0.5;
+        this._pitchSpeed = options?.pitchSpeed || 0.3;
+    }
+
+    onAdd(map: MapLibreMap) {
+        this._map = map;
+        this._container = document.createElement("div");
+
+        this._map.on("mousedown", this._onMouseDown);
+
+        return this._container;
+    }
+
+    onRemove(map: MapLibreMap) {
+        this._container?.parentNode?.removeChild(this._container);
+        this._map = undefined;
+
+        map.off("mousedown", this._onMouseDown);
+    }
+
+    private _onMouseDown = (evt: MapMouseEvent & Object) => {
+        if (evt.originalEvent.button !== 2) return;
+
+        evt.originalEvent.preventDefault();
+
+        const onMouseMove = (evt: MouseEvent) => {
+            if (!this._map) return;
+
+            const newBearing =
+                this._map.getBearing() + evt.movementX * this._bearingSpeed;
+            const newPitch = this._map.getPitch() - evt.movementY * this._pitchSpeed;
+
+            this._map.jumpTo({
+                bearing: newBearing,
+                pitch: Math.min(85, Math.max(0, newPitch)),
+            });
+        };
+
+        const onMouseUp = () => {
+            window.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mouseup", onMouseUp);
+        };
+
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
+    };
+}
+
+Название файла
+useDeckGL.js
+import { MapboxOverlay } from '@deck.gl/mapbox';
+import { GeoJsonLayer, } from '@deck.gl/layers';
+import colorer from '~/core/colorer';
+
+const polygons = []
+
+for (let i = 150; i <= 375; i += 25) {
+    polygons.push(await import(`~/assets/${i}.json`))
+}
+
+const addZ = (coords, z) => {
+    return typeof coords[0] === 'number'
+        ? [coords[0], coords[1], z]
+        : coords.map(c => addZ(c, z))
+}
+
+const hexToRgb = (hex) => {
+    const string = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    const o = string ? {
+        r: parseInt(string[1], 16),
+        g: parseInt(string[2], 16),
+        b: parseInt(string[3], 16)
+    } : null;
+
+    return [o.r, o.g, o.b, 100]
+}
+
+export default function useDeckGL({ map }) {
+
+    const selectedHeight = inject('selectedHeight')
+    const visibleDeckGL = inject('visibleDeckGL')
+
+    map.on('load', () => {
+        const processedData = computed(() => {
+            const features = polygons
+                .flatMap(c => c.features)
+                .filter(f => f.properties.H === selectedHeight.value)
+
+            return {
+                type: 'FeatureCollection',
+                features: features.map(f => ({
+                    ...f,
+                    geometry: {
+                        ...f.geometry,
+                        coordinates: addZ(f.geometry.coordinates, f.properties.H + 100)
+                    }
+                }))
+            }
+        })
+
+        const layer = new GeoJsonLayer({
+            id: `polygonDeckGL`,
+            data: processedData.value,
+            extruded: true,
+            getFillColor: f => {
+                return hexToRgb(colorer.paintSelf('m-t', f.properties.t))
+            },
+            getElevation: 10,
+        })
+
+        const overlay = new MapboxOverlay({
+            interleaved: false,
+            layers: [layer]
+        })
+
+        map.addControl(overlay);
+
+        watch(visibleDeckGL, (visible) => {
+            const layer = new GeoJsonLayer({
+                id: `polygonDeckGL`,
+                data: processedData.value,
+                visible: visible,
+                extruded: true,
+                getFillColor: f => {
+                    return hexToRgb(colorer.paintSelf('m-t', f.properties.t))
+                },
+                getElevation: 10,
+            })
+
+            overlay.setProps({ layers: [layer] })
+        })
+
+        watch(selectedHeight, (height) => {
+            const layer = new GeoJsonLayer({
+                id: `polygonDeckGL`,
+                data: processedData.value,
+                visible: visibleDeckGL.value,
+                extruded: true,
+                getFillColor: f => {
+                    return hexToRgb(colorer.paintSelf('m-t', f.properties.t))
+                },
+                getElevation: 10,
+            })
+
+            overlay.setProps({ layers: [layer] })
+        })
+    })
+}
+
+Название файла
+useFill.js
+import colorer from "~/core/colorer";
+
+const polygons = []
+
+for (let i = 150; i <= 375; i += 25) {
+    polygons.push(await import(`~/assets/${i}.json`))
+}
+
+export default function usePolygons({ map }) {
+
+    const visibleFill = inject('visibleFill')
+    const selectedHeight = inject('selectedHeight')
+
+    map.on('load', () => {
+
+        polygons.forEach((item, i) => {
+            map.addSource(`PolygonSource${item.name}`, {
+                type: 'geojson',
+                data: { ...item }
+            });
+
+            map.addLayer({
+                id: `Polygon${item.name}`,
+                type: 'fill',
+                source: `PolygonSource${item.name}`,
+                layout: { visibility: visibleFill.value ? 'visible' : 'none' },
+                paint: {
+                    'fill-opacity': 0.1,
+                    "fill-color": ['interpolate',
+                        ['linear'],
+                        ['get', 't'],
+                        ...colorer.getScheme('m-t')
+                    ]
+                }
+            });
+        })
+    })
+
+    watch(visibleFill, (value) => {
+        if (selectedHeight.value == 125) {
+            polygons.forEach((item) => {
+                map.setLayoutProperty(
+                    `Polygon${item.name}`,
+                    'visibility',
+                    value ? 'visible' : 'none'
+                );
+
+                map.setPaintProperty(
+                    `Polygon${item.name}`,
+                    'fill-opacity', 0.1)
+            })
+        }
+        else {
+            if (value) {
+                polygons.forEach((item) => {
+                    if (selectedHeight.value == item.name) {
+                        map.setLayoutProperty(
+                            `Polygon${item.name}`,
+                            'visibility',
+                            'visible'
+                        );
+
+                        map.setPaintProperty(
+                            `Polygon${item.name}`,
+                            'fill-opacity', 0.5)
+                    }
+                    else
+                        map.setLayoutProperty(
+                            `Polygon${item.name}`,
+                            'visibility',
+                            'none'
+                        );
+                })
+            }
+            else {
+                polygons.forEach((item) => {
+                    if (selectedHeight.value == item.name) {
+                        map.setLayoutProperty(
+                            `Polygon${item.name}`,
+                            'visibility',
+                            'none'
+                        );
+                    }
+
+                })
+            }
+        }
+    })
+
+    watch(selectedHeight, (height) => {
+        if (height == 125) {
+            polygons.forEach((item) => {
+                map.setLayoutProperty(
+                    `Polygon${item.name}`,
+                    'visibility',
+                    visibleFill.value ? 'visible' : 'none'
+                );
+
+                map.setPaintProperty(
+                    `Polygon${item.name}`,
+                    'fill-opacity', 0.1)
+            })
+        }
+        else {
+            if (visibleFill.value) {
+                polygons.forEach((item) => {
+                    if (height == item.name) {
+                        map.setLayoutProperty(
+                            `Polygon${item.name}`,
+                            'visibility',
+                            'visible'
+                        );
+
+                        map.setPaintProperty(
+                            `Polygon${item.name}`,
+                            'fill-opacity', 0.5)
+                    }
+                    else
+                        map.setLayoutProperty(
+                            `Polygon${item.name}`,
+                            'visibility',
+                            'none'
+                        );
+                })
+            }
+        }
+    })
+
+}
+
+Название файла
+useFillExtrusion.js
+import colorer from "~/core/colorer";
+
+const polygons = []
+
+for (let i = 150; i <= 375; i += 25) {
+    polygons.push(await import(`~/assets/${i}.json`))
+}
+
+export default function useFillExtrusion({ map }) {
+
+    const visibleFillExtrusion = inject('visibleFillExtrusion')
+    const selectedHeight = inject('selectedHeight')
+
+    map.on('load', () => {
+
+        polygons.forEach((item, i) => {
+
+            map.addSource(`Extrusion${item.name}`, {
+                type: 'geojson',
+                data: { ...item }
+            });
+
+            map.addLayer({
+                id: `Extrusion${item.name}`,
+                type: 'fill-extrusion',
+                source: `Extrusion${item.name}`,
+                layout: { visibility: visibleFillExtrusion.value ? 'visible' : 'none' },
+                paint: {
+                    "fill-extrusion-color": ['interpolate',
+                        ['linear'],
+                        ['get', 't'],
+                        ...colorer.getScheme('m-t')
+                    ],
+                    'fill-extrusion-opacity': 0.1,
+                    'fill-extrusion-base': +item.name,
+                    'fill-extrusion-height': +item.name + 2,
+                }
+            });
+        })
+    })
+
+    watch(visibleFillExtrusion, (value) => {
+        polygons.forEach((item) => {
+            map.setLayoutProperty(
+                `Extrusion${item.name}`,
+                'visibility',
+                value ? 'visible' : 'none'
+            );
+
+            map.setPaintProperty(
+                `Extrusion${item.name}`,
+                'fill-extrusion-opacity', 0.1)
+        })
+    })
+
+
+    watch(selectedHeight, (height) => {
+
+        if (height == 125) {
+            polygons.forEach((item) => {
+                map.setLayoutProperty(
+                    `Extrusion${item.name}`,
+                    'visibility',
+                    visibleFillExtrusion.value ? 'visible' : 'none'
+                );
+
+                map.setPaintProperty(
+                    `Extrusion${item.name}`,
+                    'fill-extrusion-opacity', 0.1)
+            })
+        }
+        else {
+            if (visibleFillExtrusion.value) {
+                polygons.forEach((item) => {
+                    if (height == item.name) {
+
+                        map.setPaintProperty(
+                            `Extrusion${item.name}`,
+                            'fill-extrusion-opacity', 0.5)
+
+                        map.setLayoutProperty(
+                            `Extrusion${item.name}`,
+                            'visibility',
+                            'visible'
+                        );
+                    }
+                    else
+                        map.setLayoutProperty(
+                            `Extrusion${item.name}`,
+                            'visibility',
+                            'none'
+                        );
+                })
+            }
+        }
+    })
+
+}
+
+Название файла
+useGFS.js
+export default function useGFS({ map }) {
+
+    const isOpen = inject('isOpenDialogGFS')
+    const gfsData = inject('gfsData')
+
+    map.on('click', (e) => {
+        const feature = map.queryRenderedFeatures(e.point)[0];
+
+        if (!feature) {
+            const { lngLat } = e
+
+            const URL = `https://gis.krasn.ru/gopher/bands/2026020206/${lngLat.lng},${lngLat.lat}`
+
+            const data = fetch(URL).then(res => res.json())
+
+            data.then(res => {
+                gfsData.value = res
+                isOpen.value = true
+            })
+        }
+    })
+}
+
+Название файла
+useMap.ts
+import maplibregl, { NavigationControl, type LayerSpecification } from "maplibre-gl";
+import { RotateControl } from "./control";
+import type { ShallowRef } from "vue";
+
+const polygons = []
+
+for (let i = 150; i <= 375; i += 25) {
+    polygons.push(await import(`~/assets/${i}.json`))
+}
+
+export default function useMap({ container }: { container: string }) {
+
+    const selectedSubstrate = inject<ShallowRef<string>>('selectedSubstrate') || shallowRef('osm')
+
+    const computer = 'gis.krasn.ru:8080/twin-tile'
+
+    const layers: LayerSpecification[] = [
+        {
+            id: "osm",
+            type: "raster",
+            source: "osmSource",
+            layout: { visibility: 'none' },
+        },
+
+        {
+            id: "satellite",
+            type: "raster",
+            source: "satelliteSource",
+        }
+    ]
+
+
+    const map = new maplibregl.Map({
+        container: container,
+        center: [92.8924, 56.0126],
+        pitch: 30,
+        hash: true,
+        zoom: 10,
+        dragRotate: false,
+        canvasContextAttributes: { antialias: true },
+        maxBounds: [[92.0236103, 55.7328042], [93.4843803, 56.3649399]],
+
+        style: {
+            version: 8,
+
+            glyphs: `http://${computer}/font/{fontstack}/{range}.pbf`,
+
+            sources: {
+                osmSource: {
+                    type: "raster",
+                    tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+                    tileSize: 512,
+                },
+
+                satelliteSource: {
+                    type: 'raster',
+                    tiles: [`https://c1.monitor.krasn.ru/tiles/wm_sentinel2016/{z}/{x}/{y}.jpeg`],
+                    tileSize: 512,
+                    scheme: 'tms',
+                    maxzoom: 15,
+                    minzoom: 1,
+                }
+            },
+
+            layers: layers
+        }
+
+    })
+
+    map.addControl(new RotateControl())
+
+    map.addControl
+        (new NavigationControl({
+            visualizePitch: true,
+            visualizeRoll: true,
+            showZoom: true,
+            showCompass: true
+        }),
+            'top-right');
+
+    map.addControl(
+        new maplibregl.TerrainControl({
+            source: 'terrariumSource',
+            exaggeration: 1,
+        }),
+        'top-right'
+    );
+
+    watch(selectedSubstrate, (value) => {
+        layers.forEach(layer => {
+            const id = layer.id
+            const visibility = id === value ? 'visible' : 'none';
+
+            if (map.getLayer(id)) {
+                map.setLayoutProperty(id, 'visibility', visibility);
+            }
+        })
+    })
+
+    return { map }
+}
+
+Название файла
+useSiteLayer.js
+import { createSiteCollection } from "~/core/layer/createSiteLayer";
+import colorer from "~/core/colorer";
+
+export default function useSite({ map, features }) {
+
+    const selectedIndicator = inject('selectedIndicator')
+    const selectedDate = inject('selectedDate')
+    const isOpenDialog = inject('isOpenDialog')
+    const selectedFeature = inject('selectedFeature')
+
+    map.on('load', () => {
+        const collection = createSiteCollection(features.value[selectedDate.value], { name: 'site' })
+
+        collection.forEach(c => {
+            map.addSource(c.name, c.sources);
+            map.addLayer(c.layer);
+        })
+
+        map.on('click', 'site', (e) => {
+            const feature = e.features[0]
+            selectedFeature.value = feature
+            isOpenDialog.value = true
+        })
+
+        watch(selectedIndicator, (indicator) => {
+
+            const { code } = indicator
+
+            const scheme = colorer.getScheme(code)
+
+            const nameLayer = 'site'
+            const nameTextLayer = `site-labels`
+
+            map.setPaintProperty(nameLayer, 'circle-color', [
+                'interpolate',
+                ['linear'],
+                ['get', code],
+                ...scheme
+            ])
+
+            map.setLayoutProperty(nameTextLayer, 'text-field',
+                ['format',
+                    ['get', 'name'], { 'font-scale': 0.8 },
+                    '\n',
+                    ['get', code], { 'font-scale': 0.7 }
+                ],)
+
+            map.setFilter(nameLayer, ['has', code])
+            map.setFilter(nameTextLayer, ['has', code])
+
+        },
+            { immediate: true })
+
+        watch(selectedDate, (date) => {
+            map.getSource('site').setData(features.value[date])
+        })
+    })
+
+
+}
+
+Название файла
+useTerrain.ts
+import type { Map } from "maplibre-gl";
+
+export default function useTerrain({ map }: { map: Map }) {
+
+    const visibleHill = ref(false)
+
+    const paint = {
+        'hillshade-exaggeration': 0.3,
+        'hillshade-shadow-color': '#cccccc',
+        'hillshade-highlight-color': '#000000',
+        'hillshade-accent-color': '#000000',
+        'hillshade-illumination-direction': 315,
+    }
+
+    map.on('load', () => {
+        map.addSource('terrariumSource', {
+            type: "raster-dem",
+            tiles: [`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png`],
+            tileSize: 256,
+            bounds: [92.0236103, 55.7328042, 93.4843803, 56.3649399],
+            encoding: 'terrarium',
+            maxzoom: 15,
+            minzoom: 1,
+        });
+
+        map.setTerrain({
+            'source': 'terrariumSource',
+            'exaggeration': 1
+        });
+
+        map.addLayer({
+            id: 'hill',
+            type: 'hillshade',
+            source: 'terrariumSource',
+            layout: { visibility: 'none' },
+            paint: paint
+        })
+
+    })
+
+    watch(visibleHill, visible => {
+        map.setLayoutProperty(
+            'hill',
+            'visibility',
+            visible ? 'visible' : 'none'
+        );
+    })
+
+    return { visibleHill }
+}
+
+Название файла
+useTube.js
+import maplibregl from "maplibre-gl";
+import * as THREE from "three";
+
+function calculateDistanceMercatorToMeters(from, to) {
+    const mercatorPerMeter = from.meterInMercatorCoordinateUnits();
+    const dEast = to.x - from.x;
+    const dEastMeter = dEast / mercatorPerMeter;
+    const dNorth = from.y - to.y;
+    const dNorthMeter = dNorth / mercatorPerMeter;
+    return { dEastMeter, dNorthMeter };
+}
+
+
+export default function useTube({ map }) {
+    map.on('load', () => {
+        const tubes = [
+            { x: 93.029659, y: 56.024332, height: 300, },
+            { x: 93.033493, y: 56.025403, height: 250 },
+
+            { x: 92.898606, y: 55.970713, height: 250 },
+            { x: 92.901071, y: 55.970737, height: 250 },
+
+            { x: 93.094622, y: 56.109603, height: 250 },
+            { x: 93.090299, y: 56.106921, height: 150 }
+        ]
+
+        tubes.forEach((tube, index) => {
+
+            const sceneOrigin = new maplibregl.LngLat(tube.x, tube.y);
+
+            const customLayer = {
+                id: `3d-model ${index}`,
+                type: "custom",
+                renderingMode: "3d",
+                onAdd: function (map, gl) {
+                    try {
+                        this.camera = new THREE.Camera();
+                        this.scene = new THREE.Scene();
+                        this.map = map;
+                        this.renderer = new THREE.WebGLRenderer({
+                            canvas: map.getCanvas(),
+                            context: gl,
+                            antialias: true,
+                        });
+                        this.renderer.autoClear = false;
+
+                        const scene = new maplibregl.LngLat(tube.x, tube.y);
+                        const modelLocation = new maplibregl.LngLat(tube.x, tube.y);
+
+                        const sceneElevation = map.queryTerrainElevation(scene);
+                        const model1Elevation = map.queryTerrainElevation(modelLocation);
+
+                        const model1up = model1Elevation + (tube.height / 2) - sceneElevation;
+                        const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(scene);
+                        const model1Mercator = maplibregl.MercatorCoordinate.fromLngLat(modelLocation);
+
+                        const { dEastMeter: model1east, dNorthMeter: model1north } = calculateDistanceMercatorToMeters(sceneOriginMercator, model1Mercator);
+
+                        const geometry = new THREE.CylinderGeometry(10, 20, tube.height, 16, 3);
+
+                        const material = new THREE.MeshBasicMaterial({ color: 0xcccccc });
+
+                        const tubeModel = new THREE.Mesh(geometry, material);
+
+                        tubeModel.position.set(model1east, model1north, model1up);
+
+                        tubeModel.rotation.x = Math.PI / 2
+
+                        this.scene.add(tubeModel);
+
+                    }
+
+                    catch (e) {
+                        console.log(e)
+                    }
+                },
+
+                render: function (gl, args) {
+                    const offsetFromCenterElevation = map.queryTerrainElevation(sceneOrigin) || 0;
+                    const sceneOriginMercator = maplibregl.MercatorCoordinate.fromLngLat(sceneOrigin, offsetFromCenterElevation);
+
+                    const sceneTransform = {
+                        translateX: sceneOriginMercator.x,
+                        translateY: sceneOriginMercator.y,
+                        translateZ: sceneOriginMercator.z,
+                        scale: sceneOriginMercator.meterInMercatorCoordinateUnits()
+                    };
+
+                    const m = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix);
+                    const l = new THREE.Matrix4()
+                        .makeTranslation(sceneTransform.translateX, sceneTransform.translateY, sceneTransform.translateZ)
+                        .scale(new THREE.Vector3(sceneTransform.scale, -sceneTransform.scale, sceneTransform.scale));
+
+                    this.camera.projectionMatrix = m.multiply(l);
+                    this.renderer.resetState();
+                    this.renderer.render(this.scene, this.camera);
+                    map.triggerRepaint();
+                },
+            };
+
+            map.addLayer(customLayer)
+        })
+    })
+}
+
+Название файла
+useVoronoi.js
+
+import * as turf from "@turf/turf";
+import colorer from "~/core/colorer";
+
+const createGrid = ({ collection, date, indicator, bbox }) => {
+    const points = { type: 'FeatureCollection', features: collection[date].features.filter(p => p.properties[indicator]) }
+    const grid = turf.interpolate(points, 1, { gridType: "points", property: indicator, });
+
+    const polygons = turf.voronoi(grid, { bbox });
+
+    return polygons
+}
+
+export default function useVoronoi({ map, features }) {
+
+    const selectedIndicator = inject('selectedIndicator')
+    const selectedDate = inject('selectedDate')
+    const visibleVoronoi = inject('visibleVoronoi')
+
+    const bbox = [92.0236103, 55.7328042, 93.4843803, 56.3649399]
+
+    map.on('load', () => {
+
+        const polygons = createGrid({ collection: features.value, date: selectedDate.value, indicator: selectedIndicator.value.code, bbox })
+
+        map.addSource(`voronoiTest`, {
+            type: "geojson",
+            data: polygons
+        });
+
+        map.addLayer({
+            id: `voronoiTest`,
+            source: `voronoiTest`,
+            type: 'fill',
+            layout: { visibility: visibleVoronoi.value ? 'visible' : 'none' },
+            paint: {
+                'fill-opacity': 0.5,
+                "fill-color": ['interpolate',
+                    ['linear'],
+                    ['get', selectedIndicator.value.code],
+                    ...colorer.getScheme(selectedIndicator.value.code)
+                ]
+            }
+        }, 'site');
+
+
+        watch(selectedIndicator, indicator => {
+            const { code } = indicator
+            const date = selectedDate.value
+            const scheme = colorer.getScheme(code)
+
+            const polygons = createGrid({ collection: features.value, date: date, indicator: code, bbox })
+
+            map.setPaintProperty('voronoiTest', 'fill-color', [
+                'interpolate',
+                ['linear'],
+                ['get', code],
+                ...scheme
+            ])
+
+            map.getSource('voronoiTest').setData(polygons)
+        })
+
+        watch(selectedDate, date => {
+            const code = selectedIndicator.value.code
+            const polygons = createGrid({ collection: features.value, date: date, indicator: code, bbox })
+
+            map.getSource('voronoiTest').setData(polygons)
+        })
+
+        watch(visibleVoronoi, value => {
+            map.setLayoutProperty(
+                `voronoiTest`,
+                'visibility',
+                value ? 'visible' : 'none'
+            );
+        })
+
+    })
+}
+
+Название файла
+Menu.vue
+<script setup lang="ts">
+
+const items = [
+    { title: "Обзор", to: '/' },
+    { title: "Геопространственные данные", to: '/geo' },
+    { title: "Метеоусловия" },
+    { title: "Загрязнения атмосферы" },
+    { title: "Статистический анализ" }
+]
+
+</script>
+
+<template>
+    <nav class="menu">
+        <ul>
+            <li v-for="item in items">
+                <NuxtLink :to="item.to">{{ item.title }}</NuxtLink>
+            </li>
+        </ul>
+    </nav>
+</template>
+
+<style scoped>
+ul {
+    display: flex;
+    justify-content: space-around;
+}
+
+li {
+    display: inline-block;
+    padding-right: 1rem;
+}
+
+.menu {
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    padding: 0.5rem;
+}
+</style>
+
+Название файла
+ButtonSidebar.vue
+<script setup lang="ts">
+
+const open = inject<Ref<boolean>>('isOpenSidebar')
+
+</script>
+
+<template>
+    <div class="sibebarButton">
+        <UButton @click="open = true" icon="i-lucide-menu"></UButton>
+    </div>
+</template>
+
+<style scoped>
+.sibebarButton {
+    position: absolute;
+    top: 10px;
+    right: 50px;
+    z-index: 2;
+}
+</style>
+
+Название файла
+Sidebar.vue
+<script setup lang="ts">
+
+const open = inject<Ref<boolean>>('isOpenSidebar')
+const visibleFill = inject<Ref<boolean>>('visibleFill')
+const visibleFillExtrusion = inject<Ref<boolean>>('visibleFillExtrusion')
+const visibleVoronoi = inject<Ref<boolean>>('visibleVoronoi')
+const visibleDeckGL = inject<Ref<boolean>>('visibleDeckGL')
+const selectedSubstrate = inject<Ref<string>>('selectedSubstrate')
+
+const substrates = [{ label: 'Спутник', value: 'satellite' }, { label: 'OSM', value: 'osm' }]
+
+const selectedHeight = inject<Ref<number>>('selectedHeight')
+
+</script>
+
+<template>
+    <USlideover :overlay="false" :dismissible="false" :modal="false" :title="'Меню'" v-model:open="open">
+        <template #body>
+            <USeparator label="Слои"></USeparator>
+
+            <br />
+
+            <UFormField class="size-fit" orientation="horizontal" label="Подложка">
+                <USelect v-model="selectedSubstrate" style="width: 150px;" placeholder="Выберите слой"
+                    :items="substrates"></USelect>
+            </UFormField>
+
+            <br />
+
+            <UCheckbox label="Полигоны 2D" v-model="visibleFill"></UCheckbox>
+            <UCheckbox label="Полигоны 3D" v-model="visibleFillExtrusion"></UCheckbox>
+            <UCheckbox label="Полигоны DeckGL" v-model="visibleDeckGL"></UCheckbox>
+            <UCheckbox label="Диаграмма Вороного" v-model="visibleVoronoi"></UCheckbox>
+
+            <br />
+
+            <div class="flex flex-col gap-2">
+                <span>Высота ({{ selectedHeight }})</span>
+                <USlider v-model="selectedHeight" :min="125" :max="375" :step="25" />
+            </div>
+
+            <br />
+            <div class="flex items-center">
+                <span>Тема</span>
+                <UColorModeButton />
+            </div>
+        </template>
+    </USlideover>
+</template>
+
+Название файла
+useSidebar.ts
+export default function useSidebar() {
+    const openSidebar = ref<boolean>(false)
+
+    provide('openSidebar', openSidebar)
+}
+
+Название файла
+SiteDialog.vue
+<script setup lang="ts">
+import useSiteDialog from '../composables/useSiteDialog';
+import IndicatorsList from '~/components/Indicator/components/IndicatorsList.vue';
+import Line from '~/components/Chart/components/Line.vue';
+import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
+
+const isOpenDialog = inject<Ref<boolean>>('isOpenDialog')
+
+const { selectedFeature, timePeriod, chartData, value, lastData, } = useSiteDialog()
+
+const setValue = (e: string[]) => {
+    value.value = e
+}
+
+const df = new DateFormatter('ru-RU', {
+    dateStyle: 'medium'
+})
+
+const modelValue = shallowRef(timePeriod.value)
+
+const display = computed(() => {
+    const start = df.format(timePeriod!.value.start.toDate(getLocalTimeZone()))
+    const end = df.format(timePeriod!.value.end.toDate(getLocalTimeZone()))
+    return `${start} - ${end}`
+})
+
+const setValidValue = () => {
+    timePeriod.value = modelValue.value
+}
+
+</script>
+
+<template>
+    <UModal fullscreen :title="selectedFeature?.properties.name" v-model:open="isOpenDialog">
+        <template #body>
+            <div class="site-dialog">
+                <div class="wrapper">
+                    <h2>Данные</h2>
+                    <Line :series="chartData"></Line>
+                </div>
+                <div class="wrapper">
+                    <h2>Период</h2>
+                    <UPopover>
+                        <UButton color="neutral" variant="subtle" icon="i-lucide-calendar">
+                            {{ display }}
+                        </UButton>
+
+                        <template #content>
+                            <UCalendar v-model="modelValue" range class="p-2" @update:validModelValue="setValidValue" />
+                        </template>
+                    </UPopover>
+                    <IndicatorsList :items="lastData" :selected-indicator="value" @select-indicator="setValue">
+                    </IndicatorsList>
+                </div>
+            </div>
+        </template>
+    </UModal>
+</template>
+
+<style scoped>
+.wrapper {
+    background: var(--ui-bg-muted);
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+
+.site-dialog {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    grid-template-rows: 1fr;
+    height: 500px;
+    gap: 0.5rem;
+}
+
+.myChart {
+    width: 100%;
+    height: 100%;
+}
+</style>
+
+Название файла
+useSiteDialog.ts
+import type { CalendarDate } from "@internationalized/date";
+import type { SeriesOption } from "echarts";
+import type { MarkLineOption } from "echarts/types/src/component/marker/MarkLineModel.js";
+import type { Feature } from "maplibre-gl";
+import type { ShallowRef } from "vue";
+import getDiff from "~/core/time/getDiff";
+import type Indicator from "~/types/indicator";
+import type SiteData from "~/types/siteData";
+import SetDataService from "~/core/data/setDataService";
+
+const setDialogDataService = new SetDataService()
+
+export default function useSiteDialog() {
+    const selectedFeature = inject<ShallowRef<Feature>>('selectedFeature')
+    const dataGroupedBySite = inject<ComputedRef<any>>('dataGroupedBySite')
+    const selectedIndicator = inject<ShallowRef<Indicator>>('selectedIndicator')
+    const selectedDate = inject<ShallowRef<string>>('selectedDate')
+    const selectedDates = inject<ShallowRef<{ start: CalendarDate, end: CalendarDate }>>('selectedDates')
+    const indicators = inject<Indicator[]>('indicators')
+    const loading = inject<ShallowRef<boolean>>('loading')!
+
+    const timePeriod = shallowRef<{ start: CalendarDate, end: CalendarDate }>({ ...selectedDates!.value })
+
+    const value = shallowRef<string[]>([selectedIndicator?.value.code || 'm-t'])
+
+    const siteData = shallowRef<SiteData[]>([])
+
+    const lastData = computed<Indicator[]>(() => {
+
+        if (siteData.value.length == 0) {
+            return []
+        }
+
+        const sums: any = {};
+        const counts: any = {}
+
+        indicators!.forEach(indicator => {
+            sums[indicator.code] = 0;
+            counts[indicator.code] = 0
+        });
+
+        siteData.value.forEach(obj => {
+            indicators!.forEach(indicator => {
+                if (obj[indicator.code]) {
+                    sums[indicator.code] += obj[indicator.code];
+                    counts[indicator.code]++
+                }
+            });
+        });
+
+        const averages: any = [];
+
+        indicators!.forEach(indicator => {
+            const avg = sums[indicator.code] / counts[indicator.code]
+            const value = `${avg.toFixed(3)} ${indicator.units || ''}`
+            if (avg)
+                averages.push({ ...indicator, value })
+        })
+
+        return averages || []
+    })
+
+    const chartData = computed<SeriesOption[]>(() => {
+        if (!selectedFeature?.value) {
+            return []
+        }
+
+        const markLine: MarkLineOption = {
+            silent: true,
+            animation: false,
+            symbol: 'none',
+            label: {
+                position: 'end',
+                color: 'inherit'
+            },
+            data: [{ xAxis: selectedDate?.value, }]
+        }
+
+        const res: SeriesOption[] = value.value.map((code, index) => {
+            const indicator = indicators?.find(i => i.code == code)
+            const data = siteData.value.map((d: any) => {
+                return [d.time, d[code || 0] || null]
+            })
+            return { data, type: 'line', name: indicator?.name, showSymbol: true, yAxisIndex: index, symbolSize: 2 }
+        })
+
+        res[0]!.markLine = markLine
+
+        return res
+
+    })
+
+    watch(() => selectedFeature, (shallowFeature) => {
+        const { properties } = shallowFeature!.value
+        const id = properties.site
+        const data = dataGroupedBySite?.value[id] || []
+
+        siteData.value = data
+
+    }, { immediate: true })
+
+    watch(timePeriod, async (newTimePeriod) => {
+        const begin = newTimePeriod.start.toString()
+        const end = newTimePeriod.end.toString()
+        const id = selectedFeature!.value.properties.site
+        const codeDta = selectedFeature!.value.properties.codeDta
+        const difference = getDiff(newTimePeriod.start, newTimePeriod.end)
+        const timeInterval = difference < 5 ? 'hour' : 'day'
+
+        loading.value = true
+
+        const data = await setDialogDataService.getDataById({ begin, end, timeInterval, codeDta, id })
+            .finally(() =>
+                loading.value = false)
+
+        siteData.value = data
+    })
+
+    return { selectedFeature, timePeriod, chartData, selectedIndicator, value, lastData }
+}
+
+Название файла
+Point.vue
+<script setup lang="ts">
+import type { Point } from '~/types/timeline';
+
+interface Props {
+    item: Point
+    isSelected: boolean,
+    mode: 'hour' | 'day'
+}
+
+const { item, isSelected, mode } = defineProps<Props>()
+
+const emits = defineEmits(['onClick'])
+
+const view = computed(() => {
+    const s = item.time!.split(' ')
+    return mode == 'day' ? s[0] : s[1]!.slice(0, -3)
+})
+
+</script>
+
+<template>
+    <UPopover mode="hover" arrow :dismissible="false">
+        <div :class="[isSelected ? 'selected' : '', 'point']" @click="emits('onClick')">
+            <div :class="['point-circle']" :style="{ background: item.background }"></div>
+            <div class="point-text">
+                {{ view }}
+            </div>
+        </div>
+
+        <template #content>
+            <div class="popover-content">
+                <span> Среднее <b>{{ item.value!.toFixed(2) }}</b> </span>
+            </div>
+        </template>
+    </UPopover>
+</template>
+
+<style scoped>
+.popover-content {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+    margin: 0;
+}
+
+.point {
+    position: relative;
+    display: flex;
+    font-size: 1rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+.point-text {
+    text-align: center;
+}
+
+.point:hover {
+    cursor: pointer;
+}
+
+.point:hover>.point-circle {
+    background: #cccccc;
+}
+
+.selected .point-circle {
+    box-shadow: 0 0 0 3px var(--ui-color-secondary-500);
+}
+
+.selected {
+    font-weight: 500;
+}
+
+.point-circle {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #000;
+    border-radius: 20px;
+}
+</style>
+
+Название файла
+PointTransition.vue
+<script setup lang="ts">
+import type { Point } from '~/types/timeline';
+
+interface Props {
+    item: Point
+}
+
+const { item } = defineProps<Props>()
+
+</script>
+
+<template>
+    <div class="point">
+        <div :class="['point-circle']"></div>
+        <span class="point-text">
+            {{ item.time }}
+        </span>
+    </div>
+</template>
+
+<style scoped>
+.point {
+    position: relative;
+    display: flex;
+    font-size: 1rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+.point-text {
+    font-weight: 500;
+    color: var(--ui-text);
+}
+
+.point-circle {
+    width: 1px;
+    height: 20px;
+    border: 3px solid #000;
+    background: #000;
+    border-radius: 20px;
+}
+</style>
+
+Название файла
+Timeline.vue
+<script setup>
+import useTimeline from '../composables/useTimeline';
+import Point from './Point.vue';
+
+import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
+import PointTransition from './PointTransition.vue';
+
+const selectedDate = inject('selectedDate')
+
+const { items, avg } = defineProps(['items', 'avg'])
+
+const emits = defineEmits(['updateDate'])
+
+const {
+    page,
+    maxPage,
+    pointsByPage,
+    itemsInPage,
+    timeline,
+    selectedDates,
+    pressArrowLeft,
+    pressArrowRight,
+    increasePage,
+    decreasePage,
+    setSelected, } = useTimeline({ items: toRef(() => items), avg: toRef(() => avg) })
+
+const isSelected = (item) => {
+    return item.time == selectedDate.value
+}
+
+const df = new DateFormatter('ru-RU', {
+    dateStyle: 'medium'
+})
+
+const modelValue = shallowRef(selectedDates.value)
+
+const display = computed(() => {
+    const start = df.format(modelValue.value.start.toDate(getLocalTimeZone()))
+    return start
+})
+
+const setValidValue = () => {
+    selectedDates.value = modelValue.value
+}
+
+</script>
+
+<template>
+    <div class="timeline" tabindex="0" @keydown.left="pressArrowLeft" @keydown.right="pressArrowRight">
+        <UPopover>
+            <UButton style="width: 190px;" color="neutral" variant="subtle" icon="i-lucide-calendar">
+                {{ display }}
+            </UButton>
+
+            <template #content>
+                <UCalendar range class="p-2" v-model="modelValue" @update:validModelValue="setValidValue" />
+            </template>
+        </UPopover>
+
+        <span>{{ page + 1 }}/{{ maxPage }}</span>
+
+        <div class="flex flex-col items-end">
+            <UButton @click="decreasePage" icon="i-lucide-arrow-left"></UButton>
+        </div>
+
+        <div class="timeline-body">
+            <template v-if="items.length != 0">
+                <div class="line"></div>
+                <template v-for="(item, index) in pointsByPage">
+                    <Point :item="item" :mode="timeline.mode"
+                        @onClick="selectedDate = item.time, setSelected(item, index + itemsInPage * page)"
+                        :isSelected="isSelected(item)" v-if="item.type == 'point'">
+                    </Point>
+
+                    <PointTransition :item="item" v-else>
+
+                    </PointTransition>
+                </template>
+            </template>
+
+            <template v-else>
+                <span :style="{ 'grid-column': `1 / span ${itemsInPage}` }">Нет
+                    данных</span>
+            </template>
+
+        </div>
+
+        <div class="flex flex-col items-start">
+            <UButton @click="increasePage" icon="i-lucide-arrow-right"></UButton>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+.timeline {
+    position: absolute;
+    display: flex;
+    background: var(--ui-bg);
+    height: 60px;
+    width: 100%;
+    padding: 0.5rem;
+    bottom: 0;
+    z-index: 2;
+    align-items: center;
+    flex-direction: row;
+    gap: 1rem
+}
+
+.timeline-body {
+    position: relative;
+    display: grid;
+    place-items: center;
+    grid-template-columns: repeat(15, 1fr);
+    gap: 2px;
+    width: 100%;
+}
+
+.line {
+    position: absolute;
+    top: 8px;
+    width: 100%;
+    right: 50%;
+    transform: translate(50%, 0);
+    height: 4px;
+    z-index: 0;
+    background-color: #cccccc;
+}
+</style>
+
+Название файла
+timeline.ts
+import colorer from "~/core/colorer";
+import getDiff from "~/core/time/getDiff"
+import findDayChangeIndex from "~/scripts/searchDay"
+import type Indicator from "~/types/indicator";
+import type SelectedDates from "~/types/selectedDates";
+import type { Point, Points, Timeline, TimelineMode, Transition } from "~/types/timeline";
+
+export function createPoints(points: string[], backgrounds: any, indicator: Indicator): Points {
+    return points.map((item) => {
+        const background = backgrounds[item][indicator.code] || { color: "#fff", value: 0 }
+
+        return {
+            time: item,
+            type: 'point',
+            background: background.color,
+            value: background.value
+        }
+    })
+}
+
+export function createBackgrounds(avg: any) {
+    return Object.fromEntries(
+        Object.entries(avg).map(([time, value]) => [time, colorer.paintObject(value)])
+    )
+}
+
+export function setTransition(points: Points, transition: Transition[]) {
+    let count = 0
+
+    transition.forEach(item => {
+        points.splice(item.newDayStartIndex + count, 0, { type: 'pointBorder', time: item.newDay || 'Не указано' })
+        count++
+    })
+}
+
+export function createTimeline({ borders, points, backgrounds, indicator }: { borders: SelectedDates, points: string[], backgrounds: any, indicator: Indicator }): Timeline {
+    const transition: Transition[] = findDayChangeIndex(points)
+    const timelineMode: TimelineMode = getDiff(borders.start, borders.end) < 5 ? 'hour' : 'day'
+    const newPoints: Points = createPoints(points, backgrounds, indicator)
+
+    if (timelineMode == 'hour')
+        setTransition(newPoints, transition)
+
+    return { mode: timelineMode, points: newPoints }
+}
+
+Название файла
+useTimeline.ts
+import type { ShallowRef } from "vue";
+import { createBackgrounds, createTimeline } from "./timeline";
+import type Indicator from "~/types/indicator";
+import type { CalendarDate } from "@internationalized/date";
+import type { Point, Points, Timeline } from "~/types/timeline";
+
+
+export default function useTimeline({ items, avg }: { items: Ref<string[]>, avg: any }) {
+    const selectedDate = inject<ShallowRef<string | undefined>>('selectedDate')
+    const selectedDates = inject<ShallowRef<{ start: CalendarDate, end: CalendarDate }>>('selectedDates')
+    const selectedIndicator = inject<ShallowRef<Indicator>>('selectedIndicator')
+
+    const itemsInPage: number = 15
+    const selectedIndex = ref<number>(0)
+    const page = ref<number>(0)
+
+    const backgrounds = computed(() => {
+        return createBackgrounds(avg.value)
+    })
+
+    const timeline = shallowRef<Timeline>({ mode: 'hour', points: [] })
+
+    const pointsByPage = computed<Points>(() => {
+        const from = itemsInPage * page.value;
+        const to = from + itemsInPage;
+        return timeline.value.points.slice(from, to);
+    });
+
+    const maxPage = computed<number>(() => {
+        if (!items.value) return 0;
+        return Math.ceil(timeline.value.points.length / itemsInPage);
+    });
+
+    const increasePage = () => {
+        if (page.value + 1 < maxPage.value) {
+            page.value += 1;
+        }
+    }
+
+    const decreasePage = () => {
+        if (page.value > 0) {
+            page.value -= 1
+        }
+    }
+
+    const setSelected = (item: Point, index: number) => {
+        selectedIndex.value = index
+    }
+
+    const pressArrowLeft = () => {
+        let index = selectedIndex.value - 1;
+        let point = timeline.value.points[index];
+
+        if (point && selectedDate?.value) {
+
+            if (point.type == 'pointBorder') {
+                index = selectedIndex.value - 2;
+                point = timeline.value.points[index];
+            }
+
+            selectedIndex.value = index;
+            page.value = Math.floor(index / itemsInPage);
+
+            selectedDate.value = point?.time
+        }
+    };
+
+    const pressArrowRight = () => {
+        let index = selectedIndex.value + 1;
+        let point = timeline.value.points[index];
+
+        if (point && selectedDate?.value) {
+
+            if (point.type == 'pointBorder') {
+                index = selectedIndex.value + 2;
+                point = timeline.value.points[index];
+            }
+
+            selectedIndex.value = index;
+            page.value = Math.floor(index / itemsInPage);
+
+            selectedDate.value = point?.time
+        }
+    }
+
+    watch(items, (value) => {
+        timeline.value = createTimeline({ points: value, borders: selectedDates!.value, backgrounds: backgrounds.value, indicator: selectedIndicator!.value })
+
+        const finded = timeline.value.points.findIndex(item => item.time == selectedDate?.value)
+
+        if (finded == -1 && timeline.value.points[0] && selectedDate?.value) {
+            selectedDate.value = timeline.value.points[0].time
+            page.value = 0;
+        }
+
+        if (finded > -1) {
+            page.value = Math.floor(finded / itemsInPage);
+            selectedIndex.value = finded + itemsInPage * page.value
+        }
+
+    }, { immediate: true })
+
+    watch(() => selectedDates, () => {
+        page.value = 0
+    })
+
+    return {
+        page,
+        maxPage,
+        pointsByPage,
+        selectedIndex,
+        timeline,
+        itemsInPage,
+        selectedDates,
+        pressArrowLeft,
+        pressArrowRight,
+        increasePage,
+        decreasePage,
+        setSelected
+    }
+}
+
+Название файла
+useDataGroupedBySite.ts
+import type SiteData from "~/types/siteData"
+import groupByField from "~/core/group/groupByField"
+
+export default function useDataGroupedBySite({ setData }: { setData: Ref<SiteData[]> }) {
+
+    const dataGroupedBySite = computed(() => {
+        const grouped = groupByField(setData.value, 'site')
+        return grouped
+    })
+
+    return { dataGroupedBySite }
+}
+
+Название файла
+useExistDate.ts
+import existData from "~/core/data/existData"
+import type Indicator from "~/types/indicator"
+import type SiteData from "~/types/siteData"
+
+export default function useExistDates({ selectedIndicator, setData }: { selectedIndicator: Ref<Indicator>, setData: Ref<SiteData[]> }) {
+    const existDate = ref<string[]>([])
+
+    watch(selectedIndicator, (indicator) => {
+        const dates = existData(setData.value, indicator.code)
+        existDate.value = Array.from(new Set(dates))
+    }, { immediate: true })
+
+
+    watch(setData, (data) => {
+        const dates = existData(data, selectedIndicator.value.code)
+        existDate.value = Array.from(new Set(dates))
+    }, { immediate: true })
+
+    return { existDate }
+}
+
+Название файла
+useGeneral.ts
+import { CalendarDate, getLocalTimeZone, today } from '@internationalized/date'
+import type { Feature } from '~/types/featureCollection'
+import type Indicator from '~/types/indicator'
+
+export default function useGeneral() {
+    const selectedDate = shallowRef<string>(`${today(getLocalTimeZone()).toString()} 00:00:00`)
+    const selectedDates = shallowRef<{ start: CalendarDate, end: CalendarDate }>({
+        start: today(getLocalTimeZone()),
+        end: today(getLocalTimeZone())
+    })
+
+    const selectedIndicator = shallowRef<Indicator>({ code: "m-t" })
+    const selectedFeature = ref<Feature | null>(null)
+
+    const gfsData = shallowRef({})
+
+    const isOpenDialog = ref<boolean>(false)
+    const isOpenDialogGFS = ref<boolean>(false)
+    const isOpenSidebar = ref<boolean>(false)
+
+    const selectedHeight = ref<number>(125)
+    const selectedSubstrate = ref<string>('satellite')
+
+    return {
+        selectedIndicator,
+        selectedDate,
+        selectedDates,
+        isOpenDialog,
+        isOpenDialogGFS,
+        selectedFeature,
+        isOpenSidebar,
+        selectedHeight,
+        gfsData,
+        selectedSubstrate
+    }
+}
+
+Название файла
+useGroupedBySite.ts
+import groupByField from "~/core/group/groupByField"
+import type SiteData from "~/types/siteData"
+
+export default function useGroupedBySite({ setData }: { setData: Ref<SiteData[]> }) {
+    const dataGroupedBySite = computed(() => {
+        const d: unknown[] = []
+        if (setData.value) {
+            const grouped = groupByField(d, 'site')
+            return grouped
+        }
+    })
+
+    return { dataGroupedBySite }
+}
+
+Название файла
+useLoading.ts
+export default function useLoading() {
+    const loading = shallowRef<boolean>(false)
+
+    return { loading }
+}
+
+Название файла
+useSite.ts
+import dataService from "~/core/data/register"
+import { createSiteFeatureCollection } from "~/core/features/createSiteFeature"
+import type { CalendarDate } from "@internationalized/date"
+import type Dta from "~/types/dta"
+import type DataService from "~/core/data/dataService"
+import type { ShallowRef } from "vue"
+import type SiteData from "~/types/siteData"
+import type { FeatureCollectionsMap } from "~/types/featureCollection"
+import type Indicator from "~/types/indicator"
+import { avg } from "~/core/avg/avg"
+import type SelectedDates from "~/types/selectedDates"
+
+const getData = async ({ begin, end, dta, dataService, indicators }:
+    { begin: CalendarDate, end: CalendarDate, dta: Dta[], dataService: DataService, indicators: Indicator[] }) => {
+    const data = await dataService.getData({ begin, end, dta })
+    const collection = createSiteFeatureCollection(dta, data)
+    const avgData = avg(data, indicators)
+    return { data, collection, avgData }
+}
+
+export default async function useSite() {
+    const selectedDates = inject<ShallowRef<SelectedDates>>('selectedDates')!
+    const selectedDate = inject<ShallowRef<string>>('selectedDate')
+    const loading = inject<ShallowRef<boolean>>('loading')!
+
+    const features = shallowRef<FeatureCollectionsMap>({})
+    const setData = shallowRef<SiteData[]>([])
+
+    const avgByDate = shallowRef({})
+
+    const { dta, indicators } = await dataService.getDta()
+
+    loading.value = true
+
+    const { data, collection, avgData } = await getData({ begin: selectedDates!.value.start, end: selectedDates!.value.end, dta, dataService, indicators })
+        .finally(() => loading.value = false)
+
+    setData.value = data
+    features.value = collection
+    avgByDate.value = avgData
+
+    watch(selectedDates, async (value) => {
+        loading.value = true
+
+        getData({ begin: value.start, end: value.end, dta, dataService, indicators }).then(({ data, collection, avgData }) => {
+            setData.value = data
+            features.value = collection
+            avgByDate.value = avgData
+
+            if (selectedDate)
+                selectedDate.value = `${value.start.toString()} 00:00:00`
+
+        })
+            .finally(() => loading.value = false)
+    })
+
+    return { features, setData, indicators, avgByDate, loading }
+}
+
+Название файла
+useVisibleLayer.ts
+export default function useVisibleLayers() {
+    const visibleFill = ref<boolean>(false)
+    const visibleFillExtrusion = ref<boolean>(false)
+    const visibleVoronoi = ref<boolean>(false)
+    const visibleDeckGL = ref<boolean>(false)
+    const visbileHill = ref<boolean>(false)
+
+    return { visibleFill, visibleFillExtrusion, visibleVoronoi, visibleDeckGL, visbileHill }
+}
+
+Название файла
+avg.ts
+import type Indicator from "~/types/indicator"
+import type SiteData from "~/types/siteData"
+import groupByHour from "../group/groupByHour"
+
+export const avg = (setData: SiteData[], indicators: Indicator[]) => {
+    const grouped = groupByHour<SiteData>(setData)
+
+    const res: any = {}
+
+    indicators.forEach(indicator => {
+        const code = indicator.code
+
+        let avg = 0
+
+        for (let i in grouped) {
+            if (!res[i])
+                res[i] = {}
+
+            const day = grouped[i]!.filter(g => g[code])
+
+            const sum = day.reduce((acc, value) => {
+                const v = value[code]!
+                return acc + +v;
+            }, 0);
+
+            avg = sum / day.length || 0
+
+
+            res[i][code] = avg
+        }
+    })
+
+    return res
+}
+
+Название файла
+3.json
+{
+    "m-t": [
+        -30,
+        "#1E3A8A",
+        -20,
+        "#3B82F6",
+        -10,
+        "#60A5FA",
+        0,
+        "#93C5FD",
+        10,
+        "#E5E7EB",
+        20,
+        "#FBBF24",
+        25,
+        "#F59E0B",
+        30,
+        "#EF4444",
+        35,
+        "#DC2626",
+        40,
+        "#7F1D1D"
+    ],
+    "p-pm2": [
+        0,
+        "#00E400",
+        12,
+        "#00E400",
+        35,
+        "#FFFF00",
+        55,
+        "#FF7E00",
+        150,
+        "#FF0000",
+        250,
+        "#8B008B",
+        350,
+        "#7E0023",
+        500,
+        "#202020"
+    ],
+    "m-h": [
+        0,
+        "#3B82F6",
+        20,
+        "#60A5FA",
+        30,
+        "#93C5FD",
+        40,
+        "#BBF7D0",
+        50,
+        "#86EFAC",
+        60,
+        "#4ADE80",
+        70,
+        "#FEF08A",
+        80,
+        "#FBBF24",
+        90,
+        "#F87171",
+        100,
+        "#DC2626"
+    ],
+    "m-p": [
+        705,
+        "#7C3AED",
+        728,
+        "#8B5CF6",
+        735,
+        "#A78BFA",
+        742,
+        "#C4B5FD",
+        750,
+        "#DDD6FE",
+        760,
+        "#86EFAC",
+        765,
+        "#4ADE80",
+        773,
+        "#22C55E",
+        780,
+        "#16A34A",
+        788,
+        "#15803D",
+        795,
+        "#166534"
+    ],
+    "m-wv": [
+        0,
+        "#D1D5DB",
+        0.5,
+        "#93C5FD",
+        1.5,
+        "#60A5FA",
+        3.3,
+        "#3B82F6",
+        5.5,
+        "#10B981",
+        8.0,
+        "#FBBF24",
+        10.8,
+        "#F59E0B",
+        13.9,
+        "#EA580C",
+        17.2,
+        "#DC2626",
+        20.8,
+        "#B91C1C",
+        24.5,
+        "#991B1B",
+        28.5,
+        "#7F1D1D",
+        33,
+        "#450A0A"
+    ]
+}
+
+Название файла
+colorer.js
+import colorizeByRange from "./colorize"
+import colorize from "./colorizeSelf";
+
+class Colorer {
+    constructor({ schemes }) {
+        this.schemes = schemes
+    }
+
+    register(key, schema) {
+        this.schemes[key] = schema
+    }
+
+    paint(key, data) {
+        const schema = this.schemes[key]
+        const colored = colorizeByRange(data, schema);
+
+        return colored
+    }
+
+    paintSelf(key, value) {
+        const schema = this.schemes[key]
+        return colorize(value, schema)
+    }
+
+    paintObject(data) {
+        const res = {}
+
+        for (let key in data) {
+            const value = data[key]
+            res[key] = { color: colorize(value, this.schemes[key]), value }
+        }
+
+        return res
+    }
+
+    getScheme(key) {
+        return this.schemes[key] || [0, "#ffffff"]
+    }
+}
+
+export default Colorer
+
+Название файла
+colorize.js
+export default function colorizeByRange(items, colorRanges, fieldValue = 'value') {
+    return items.map(obj => {
+        const value = obj[fieldValue];
+
+        for (let i = 0; i < colorRanges.length; i += 2) {
+            const rangeEnd = colorRanges[i];
+            const color = colorRanges[i + 1];
+
+            if (value <= rangeEnd || i === colorRanges.length - 2) {
+                return {
+                    ...obj,
+                    color: color
+                };
+            }
+        }
+
+        return obj;
+    });
+}
+
+Название файла
+colorizeSelf.js
+export default function colorize(value, colorScheme) {
+    if (value <= colorScheme[0]) {
+        return colorScheme[1];
+    }
+
+    for (let i = 0; i < colorScheme.length; i += 2) {
+        const threshold = colorScheme[i];
+        if (value < threshold) {
+            return colorScheme[i - 1];
+        }
+    }
+
+    return colorScheme[colorScheme.length - 1];
+}
+
+Название файла
+index.js
+import Colorer from "./colorer"
+import schemes from "./schemes.json"
+
+const colorer = new Colorer({ schemes })
+
+export default colorer
+
+
+Название файла
+schemes.json
+{
+    "iaqi": [
+        0,
+        "#00E400",
+        50,
+        "#00E400",
+        100,
+        "#FFFF00",
+        150,
+        "#FF7E00",
+        200,
+        "#FF0000",
+        300,
+        "#8B008B",
+        400,
+        "#7E0023",
+        500,
+        "#202020"
+    ],
+    "i371": [
+        0,
+        "#00E400",
+        1,
+        "#00E400",
+        3,
+        "#FFFF00",
+        5,
+        "#FF7E00",
+        10,
+        "#FF0000",
+        20,
+        "#8B008B",
+        30,
+        "#7E0023",
+        50,
+        "#202020"
+    ],
+    "i58": [
+        0,
+        "#00E400",
+        0.085,
+        "#00E400",
+        0.2,
+        "#FFFF00",
+        0.4,
+        "#FF7E00",
+        0.8,
+        "#FF0000",
+        1.5,
+        "#8B008B",
+        2.5,
+        "#7E0023",
+        5,
+        "#202020"
+    ],
+    "i59": [
+        0,
+        "#00E400",
+        0.4,
+        "#00E400",
+        0.8,
+        "#FFFF00",
+        1.5,
+        "#FF7E00",
+        3,
+        "#FF0000",
+        6,
+        "#8B008B",
+        10,
+        "#7E0023",
+        20,
+        "#202020"
+    ],
+    "i60": [
+        0,
+        "#00E400",
+        0.2,
+        "#00E400",
+        0.4,
+        "#FFFF00",
+        0.8,
+        "#FF7E00",
+        1.5,
+        "#FF0000",
+        3,
+        "#8B008B",
+        5,
+        "#7E0023",
+        10,
+        "#202020"
+    ],
+    "m-p": [
+        720,
+        "#2E86C1",
+        735,
+        "#3498DB",
+        750,
+        "#5DADE2",
+        760,
+        "#85C1E9",
+        770,
+        "#AED6F1"
+    ],
+    "i1": [
+        0,
+        "#00E400",
+        0.000001,
+        "#00E400",
+        0.000003,
+        "#FFFF00",
+        0.00001,
+        "#FF7E00",
+        0.00003,
+        "#FF0000",
+        0.0001,
+        "#8B008B",
+        0.0003,
+        "#7E0023",
+        0.001,
+        "#202020"
+    ],
+    "p-pm10": [
+        0,
+        "#00E400",
+        20,
+        "#00E400",
+        50,
+        "#FFFF00",
+        80,
+        "#FF7E00",
+        110,
+        "#FF0000",
+        150,
+        "#8B008B",
+        200,
+        "#7E0023",
+        300,
+        "#202020"
+    ],
+    "p-pm2": [
+        0,
+        "#00E400",
+        12,
+        "#00E400",
+        35,
+        "#FFFF00",
+        55,
+        "#FF7E00",
+        150,
+        "#FF0000",
+        250,
+        "#8B008B",
+        350,
+        "#7E0023",
+        500,
+        "#202020"
+    ],
+    "m-h": [
+        0,
+        "#2E86C1",
+        20,
+        "#3498DB",
+        40,
+        "#5DADE2",
+        60,
+        "#F7DC6F",
+        80,
+        "#F0B27A",
+        100,
+        "#E74C3C"
+    ],
+    "m-wd": [
+        0,
+        "#3498DB",
+        90,
+        "#2ECC71",
+        180,
+        "#E74C3C",
+        270,
+        "#9B59B6",
+        360,
+        "#3498DB"
+    ],
+    "i64": [
+        0,
+        "#00E400",
+        0.008,
+        "#00E400",
+        0.02,
+        "#FFFF00",
+        0.05,
+        "#FF7E00",
+        0.1,
+        "#FF0000",
+        0.2,
+        "#8B008B",
+        0.5,
+        "#7E0023",
+        1,
+        "#202020"
+    ],
+    "i62": [
+        0,
+        "#00E400",
+        0.05,
+        "#00E400",
+        0.5,
+        "#FFFF00",
+        1,
+        "#FF7E00",
+        2,
+        "#FF0000",
+        5,
+        "#8B008B",
+        10,
+        "#7E0023",
+        20,
+        "#202020"
+    ],
+    "m-wv": [
+        0,
+        "#D5DBDB",
+        1,
+        "#AED6F1",
+        3,
+        "#3498DB",
+        5,
+        "#2ECC71",
+        10,
+        "#F1C40F",
+        15,
+        "#E67E22",
+        20,
+        "#E74C3C"
+    ],
+    "m-t": [
+        -30,
+        "#2E86C1",
+        -20,
+        "#3498DB",
+        -10,
+        "#5DADE2",
+        0,
+        "#85C1E9",
+        10,
+        "#D5DBDB",
+        20,
+        "#F7DC6F",
+        30,
+        "#F0B27A",
+        40,
+        "#E74C3C"
+    ],
+    "i63": [
+        0,
+        "#00E400",
+        3,
+        "#00E400",
+        5,
+        "#FFFF00",
+        10,
+        "#FF7E00",
+        20,
+        "#FF0000",
+        30,
+        "#8B008B",
+        50,
+        "#7E0023",
+        100,
+        "#202020"
+    ],
+    "i312": [
+        0,
+        "#00E400",
+        0.05,
+        "#00E400",
+        0.1,
+        "#FFFF00",
+        0.2,
+        "#FF7E00",
+        0.5,
+        "#FF0000",
+        1,
+        "#8B008B",
+        2,
+        "#7E0023",
+        5,
+        "#202020"
+    ],
+    "i296": [
+        0,
+        "#00E400",
+        0.02,
+        "#00E400",
+        0.05,
+        "#FFFF00",
+        0.1,
+        "#FF7E00",
+        0.2,
+        "#FF0000",
+        0.5,
+        "#8B008B",
+        1,
+        "#7E0023",
+        2,
+        "#202020"
+    ],
+    "i298": [
+        0,
+        "#00E400",
+        0.01,
+        "#00E400",
+        0.03,
+        "#FFFF00",
+        0.05,
+        "#FF7E00",
+        0.1,
+        "#FF0000",
+        0.2,
+        "#8B008B",
+        0.5,
+        "#7E0023",
+        1,
+        "#202020"
+    ],
+    "i311": [
+        0,
+        "#00E400",
+        0.02,
+        "#00E400",
+        0.05,
+        "#FFFF00",
+        0.1,
+        "#FF7E00",
+        0.2,
+        "#FF0000",
+        0.5,
+        "#8B008B",
+        1,
+        "#7E0023",
+        2,
+        "#202020"
+    ]
+}
+
+Название файла
+dataService.ts
+import type SetDataService from "./setDataService"
+import type SetService from "./setService"
+import getDiff from "../time/getDiff"
+
+export default class DataService {
+    setDataService: SetDataService
+    setService: SetService
+
+    constructor({ setService, setDataService }: { setService: SetService, setDataService: SetDataService }) {
+        this.setDataService = setDataService
+        this.setService = setService
+    }
+
+    async getData(options: any) {
+        const { begin, end, dta } = options
+
+        const beginDate = begin.toString()
+        const endDate = end.toString()
+
+        const difference = getDiff(begin, end)
+        const timeInterval = difference < 5 ? 'hour' : 'day'
+
+        const data = await this.setDataService.getData({ begin: beginDate, end: endDate, timeInterval, dta })
+        return data
+    }
+
+    async getDta() {
+        const data = await this.setService.getSets()
+        return data
+    }
+}
+
+Название файла
+existData.ts
+import type SiteData from "~/types/siteData"
+
+export default function existData(data: SiteData[], indicator: string): string[] {
+    const filtered = data.filter(d => d[indicator] !== undefined)
+    const times = filtered.map(f => f.time as string)
+    const uniq = Array.from(new Set(times))
+    return uniq
+}
+
+Название файла
+register.ts
+import SetDataService from "./setDataService"
+import SetService from "./setService"
+import DataService from "./dataService"
+
+const dta = ['dta-air', 'dta-gas']
+
+const setService = new SetService({ dta })
+const setDataService = new SetDataService()
+const dataService = new DataService({ setService, setDataService })
+
+export default dataService
+
+
+Название файла
+setDataService.ts
+import formateDate from "~/scripts/formate"
+import type Dta from "~/types/dta"
+
+export default class SetDataService {
+    URL: string
+
+    constructor() {
+        this.URL = `https://sensor.krasn.ru/hub/api/3.0/sets/`
+    }
+
+    setParams(options: any, url: URL) {
+        for (let option in options) {
+            if (options[option])
+                url.searchParams.set(option, options[option])
+        }
+    }
+
+    async getDataById({ begin, end, timeInterval, codeDta, id }: { begin: string, end: string, timeInterval: string, codeDta: string, id: string }) {
+
+        const url = new URL(`${codeDta}/data/archive`, this.URL)
+
+        const options = {
+            'time_begin': `${formateDate(begin)} 00:00:00`,
+            'time_end': `${formateDate(end)} 23:59:00`,
+            'uid': 'khlnn3o37xah7pj2',
+            'time_interval': timeInterval,
+            'sites': id
+        }
+
+        this.setParams(options, url)
+
+        const promise = await fetch(url.toString()).then((res) => res.json())
+
+        return promise.data
+    }
+
+    async getData({ dta, begin, end, timeInterval }: { dta: Dta[], begin: string, end: string, timeInterval: string }) {
+
+        const promises = dta.map(set => {
+
+            const url = new URL(`${set.code}/data/archive`, this.URL)
+
+            const options = {
+                'time_begin': `${formateDate(begin)} 00:00:00`,
+                'time_end': `${formateDate(end)} 23:59:00`,
+                'uid': 'khlnn3o37xah7pj2',
+                'time_interval': timeInterval
+            }
+
+            this.setParams(options, url)
+
+            const promise = fetch(url.toString()).then((res) => res.json())
+
+            return promise
+        })
+
+        const res = await Promise.all(promises).then((res) => {
+            const arrays: any = []
+
+            res.forEach(r => arrays.push(...r.data))
+
+            return arrays
+        })
+
+        return res
+    }
+}
+
+Название файла
+setService.ts
+import type Dta from "~/types/dta"
+import createIndicators from "../indicator/indicator"
+
+export default class SetService {
+    dta: string[]
+
+    constructor({ dta }: { dta: string[] }) {
+        this.dta = dta
+    }
+
+    async getSets() {
+        const promises = this.dta.map(d => {
+            const promise = fetch(`https://sensor.krasn.ru/hub/api/3.0/sets/${d}?uid=khlnn3o37xah7pj2`).then((res) => res.json())
+            return promise
+        })
+
+        const dta: any = await Promise.all(promises).then((res) => {
+            return res.map(r => r.data)
+        })
+
+        dta.forEach((d: any) => {
+            d.sites.forEach((site: any) => {
+                site.codeDta = d.code
+            })
+        })
+
+        const indicators = createIndicators(dta)
+
+        return { dta, indicators }
+    }
+}
+
+Название файла
+createSiteFeature.ts
+import type Dta from "~/types/dta";
+import groupByHour from "../group/groupByHour";
+import type SiteData from "~/types/siteData";
+import type Site from "~/types/site";
+import type { Feature, FeatureCollection, FeatureCollectionsMap } from "~/types/featureCollection";
+
+const createSiteFeature = (site: Site, data: SiteData): Feature => {
+    return {
+        type: "Feature",
+        properties: {
+            ...site,
+            ...data
+        },
+        geometry: {
+            type: "Point",
+            coordinates: [site.geom_x, site.geom_y],
+        },
+    };
+};
+
+const createSiteFeatureCollection = (dta: Dta[], data: SiteData[]): FeatureCollectionsMap => {
+    const sites: Site[] = dta.flatMap(({ sites }) => sites);
+
+    const groupedByHour = groupByHour<SiteData>(data)
+
+    const res: FeatureCollectionsMap = {}
+
+    for (const time in groupedByHour) {
+
+        const featuresCollection: FeatureCollection = {
+            type: "FeatureCollection",
+            features: []
+        }
+
+        const features: Feature[] = []
+
+        sites.forEach(site => {
+            const filtered = groupedByHour[time]?.find(i => i.site == site.id)
+            if (filtered)
+                features.push(createSiteFeature(site, filtered))
+
+        })
+
+        featuresCollection.features = features
+
+        res[time] = featuresCollection
+    }
+
+    return res
+};
+
+export { createSiteFeatureCollection };
+
+Название файла
+groupByField.js
+export default function groupByHour(data, field) {
+    const grouped = {};
+
+    data.forEach(item => {
+        const dateTime = item[field];
+
+        const hourKey = dateTime
+
+        if (!grouped[hourKey]) {
+            grouped[hourKey] = [];
+        }
+
+        grouped[hourKey].push(item);
+    });
+
+    return grouped;
+}
+
+Название файла
+groupByHour.ts
+export default function groupByHour<T>(data: any[]) {
+    const grouped: Record<string, T[]> = {};
+
+    data.forEach(item => {
+        const dateTime = item.time;
+
+        const hourKey = dateTime.substring(0, 19);
+
+        if (!grouped[hourKey]) {
+            grouped[hourKey] = [];
+        }
+
+        grouped[hourKey].push(item);
+    });
+
+    return grouped;
+}
+
+Название файла
+indicator.ts
+import type Dta from "~/types/dta";
+import type Indicator from "~/types/indicator";
+
+export default function createIndicators(dtas: Dta[]): Indicator[] {
+    const indicators: Indicator[] = dtas.flatMap(dta => dta.indicators)
+
+    const uniq = indicators.filter((obj, index, self) => index === self.findIndex((o) => o.id === obj.id));
+
+    return uniq
+}
+
+Название файла
+createSiteLayer.ts
+import type { LayerSpecification, SourceSpecification } from "maplibre-gl";
+import type { FeatureCollection } from "~/types/featureCollection";
+
+export const createSiteSource = (data: FeatureCollection) => {
+    return {
+        type: "geojson",
+        data: data ,
+    };
+}
+
+export const createSiteCircle = (name: string): LayerSpecification => {
+    return {
+        id: name,
+        source: name,
+        type: "circle",
+        filter: ['has', 'm-t'],
+        paint: {
+            'circle-radius': 10,
+            'circle-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'm-t'],
+                0, '#00E400',
+                12, '#00E400',
+                12.1, '#FFFF00',
+                35.4, '#FFFF00',
+                35.5, '#FF7E00',
+                55.4, '#FF7E00',
+                55.5, '#FF0000',
+                150.4, '#FF0000',
+                150.5, '#8F3F97',
+                250.4, '#8F3F97',
+                250.5, '#7E0023'
+            ],
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff',
+        },
+    };
+}
+
+export const createSiteText = (name: string): LayerSpecification => {
+    return {
+        id: `${name}-labels`,
+        type: 'symbol',
+        source: name,
+        filter: ['has', 'm-t'],
+        layout: {
+            'text-field': ['format',
+                ['get', 'name'], { 'font-scale': 0.8 },
+                '\n',
+                ['get', 'm-t'], { 'font-scale': 0.7 }
+            ],
+            'text-font': ['Open Sans Bold'],
+            'text-offset': [0, 0.5],
+            'text-anchor': 'top'
+        },
+        paint: {
+            'text-color': '#ffffff',
+            'text-halo-color': '#000000',
+            'text-halo-width': 1
+        }
+    }
+}
+
+export const createSiteCollection = (data: FeatureCollection, { name }: { name: string }) => {
+
+    const sources = createSiteSource(data)
+    const circles = createSiteCircle(name)
+    const text = createSiteText(name)
+
+    return [{ name: name, layer: circles, sources }, { name: `${name}-labels`, layer: text, sources }]
+}
+
+
+Название файла
+getDiff.ts
+import { CalendarDate, } from '@internationalized/date'
+export default function getDiff(b: CalendarDate, e: CalendarDate): number {
+    const begin = b.toString()
+    const end = e.toString()
+
+    const diff = new Date(end).getTime() - new Date(begin).getTime();
+    return Math.round(diff / (1000 * 3600 * 24));
+}
+
+Название файла
+calculateWind.ts
+import { from255, Indicators } from "~/components/Dialog/composables/transform";
+
+export const calculateWind = (u: number, v: number) => {
+    u = from255(u, Indicators.ugrd);
+    v = from255(v, Indicators.vgrd);
+
+    return {
+        speed: +Math.sqrt(u ** 2 + v ** 2).toFixed(1),
+        direction: Math.atan(v / u),
+    };
+};
+
+Название файла
+default.vue
+<script setup lang="ts">
+
+</script>
+
+<template>
+    <div class="layout">
+        <div class="layout-body">
+            <slot></slot>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+.layout {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.layout-body {
+    height: 100%
+}
+</style>
+
+Название файла
+index.vue
+<script setup>
+import Map from '~/components/Map/components/Map.vue';
+import useMap from '~/components/Map/composables/useMap';
+import useTerrain from '~/components/Map/composables/useTerrain';
+import useTube from '~/components/Map/composables/useTube';
+import useSiteLayer from '~/components/Map/composables/useSiteLayer';
+import Indicators from '~/components/Indicator/components/Indicators.vue';
+import Legend from '~/components/Legend/components/Legend.vue';
+import Timeline from '~/components/Timeline/components/Timeline.vue';
+import SiteDialog from '~/components/SiteDialog/components/SiteDialog.vue';
+import ButtonSidebar from '~/components/Sidebar/components/ButtonSidebar.vue';
+import Sidebar from '~/components/Sidebar/components/Sidebar.vue';
+import usePolygons from '~/components/Map/composables/useFill';
+import useFillExtrusion from '~/components/Map/composables/useFillExtrusion';
+import useGFS from '~/components/Map/composables/useGFS';
+import Dialog from '~/components/Dialog/components/Dialog.vue';
+import useVoronoi from '~/components/Map/composables/useVoronoi';
+import useDeckGL from '~/components/Map/composables/useDeckGL';
+import useExistDates from '~/composables/useExistDate';
+import useDataGroupedBySite from '~/composables/useDataGroupedBySite';
+import Progress from '~/components/Loading/components/Progress.vue';
+
+definePageMeta({
+    layout: 'default',
+})
+
+const selectedIndicator = inject('selectedIndicator')
+const selectedFeature = inject('selectedFeature')
+
+const { features, setData, indicators, dataGroupedByHour, avgByDate, loading } = await useSite()
+const { existDate } = useExistDates({ setData, selectedIndicator })
+const { dataGroupedBySite } = useDataGroupedBySite({ setData })
+
+onMounted(() => {
+    const { map } = useMap({ container: 'map' })
+
+    useTube({ map })
+    useSiteLayer({ map, features })
+    usePolygons({ map })
+    useFillExtrusion({ map })
+    useVoronoi({ map, features })
+    useTerrain({ map })
+    useDeckGL({ map })
+})
+
+provide('setData', setData)
+provide('dataGroupedBySite', dataGroupedBySite)
+provide('dataGroupedByHour', dataGroupedByHour)
+provide('indicators', indicators)
+
+</script>
+
+<template>
+    <Progress v-if="loading"></Progress>
+    <Map></Map>
+    <Indicators :items="indicators"></Indicators>
+    <Legend></Legend>
+    <Timeline :items="existDate" :avg="avgByDate"></Timeline>
+
+    <SiteDialog v-if="selectedFeature" :key="selectedFeature"></SiteDialog>
+    <Dialog></Dialog>
+
+    <ButtonSidebar></ButtonSidebar>
+    <Sidebar></Sidebar>
+</template>
+
+<style scoped></style>
+
+Название файла
+dataPopup.js
+import formateDate from "./formate"
+
+const cache = {}
+
+const url = `https://sensor.krasn.ru/hub/api/3.0/sets`
+const uid = `khlnn3o37xah7pj2`
+
+const getDataForPopup = async (site, date) => {
+    const { id, code } = site.properties
+
+    const timeEnd = new Date(date)
+    const timeBegin = new Date(date)
+
+    timeBegin.setDate(timeEnd.getDate() - 3)
+
+    const urlData = `${url}/${code}/data/archive?uid=${uid}&time_begin=${formateDate(timeBegin)} 00:00:00&time_end=${formateDate(timeEnd)} 00:00:00&sites=${id}&time_interval=hour`
+
+    if (cache[id]) {
+        return cache[id]
+    }
+
+    const data = await fetch(urlData).then((res) => res.json())
+
+    cache[id] = data.data
+
+    return data.data
+}
+
+export { getDataForPopup }
+
+Название файла
+formate.js
+export default function formateDate(d) {
+    const date = new Date(d);
+    let dd = date.getDate();
+    let mm = date.getMonth() + 1;
+    let yy = date.getFullYear();
+
+    if (dd < 10) dd = "0" + dd;
+    if (mm < 10) mm = "0" + mm;
+    if (yy < 10) yy = "0" + yy;
+
+    return yy + "-" + mm + "-" + dd;
+}
+
+Название файла
+polygon.js
+import * as THREE from "three"
+
+const lngLatToThreeJS = (lng, lat, scale = 1) => {
+    const x = (lng / 180) * 20037508.34 * scale; // Масштабируем для сцены
+    const y = ((Math.log(Math.tan(((90 + lat) * Math.PI) / 360)) / (Math.PI / 180)) * 20037508.34 * scale) / 180;
+    return { x, y };
+};
+
+
+function displayMultiPolygon(multiPolygonGeometry, map) {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    let vertexCount = 0;
+
+    // Обрабатываем все полигоны
+    multiPolygonGeometry.features[0].geometry.coordinates.forEach(polygonGroup => {
+        polygonGroup.forEach(polygon => {
+            // Добавляем вершины для каждого полигона
+            polygon.forEach(coord => {
+
+                const point = map.project([coord[0], coord[1]]);
+
+                point.x = point.x * 10
+                point.y = point.y * 10
+
+                vertices.push(
+                    point.x,
+                    point.y,
+                    0
+                );
+
+                console.log(vertices)
+            });
+
+            for (let i = 1; i < polygon.length - 1; i++) {
+                indices.push(
+                    vertexCount,
+                    vertexCount + i,
+                    vertexCount + i + 1
+                );
+            }
+
+            vertexCount += polygon.length;
+        });
+    });
+
+    geometry.setIndex(indices);
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+    const material = new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.7
+    });
+
+    const mesh = new THREE.Mesh(geometry, material)
+
+    return mesh
+}
+
+export default displayMultiPolygon
+
+Название файла
+searchDay.ts
+import type { Transition } from "~/types/timeline";
+
+function findDayChangeIndex(datesArray: string[]): Transition[] {
+    if (datesArray.length <= 1) return [];
+
+    const transitions: Transition[] = [];
+
+    const datesOnly = datesArray.map(dateStr => dateStr.split(' ')[0]);
+
+    for (let i = 1; i < datesOnly.length; i++) {
+        if (datesOnly[i] !== datesOnly[i - 1]) {
+            transitions.push({
+                oldDayEndIndex: i - 1,
+                newDayStartIndex: i,
+                oldDay: datesOnly[i - 1] || null,
+                newDay: datesOnly[i] || null,
+                transitionPoint: i
+            });
+        }
+    }
+
+    return transitions;
+}
+
+export default findDayChangeIndex
+
+Название файла
+site.js
+const CreateSiteFeature = (site) => {
+    return {
+        type: "Feature",
+        properties: {
+            id: site.id,
+            name: site.name,
+            code: site.code,
+            ...site.data
+        },
+        geometry: {
+            type: "Point",
+            coordinates: [site.geom_x, site.geom_y],
+        },
+    };
+};
+
+const CreateSiteFeatureCollection = (sites) => {
+    const features = sites.map((site) => {
+        return CreateSiteFeature(site);
+    });
+
+    return {
+        type: "FeatureCollection",
+        features: features,
+    };
+};
+
+export { CreateSiteFeatureCollection };
+
+Название файла
+dta.ts
+import type Indicator from "./indicator"
+import type Site from "./site"
+
+export default interface Dta {
+    code: string,
+    config: unknown,
+    id: number
+    indicators: Indicator[],
+    last_time: string,
+    name: string,
+    period_begin: string
+    period_end: string
+    period_limit: unknown
+    sites: Site[]
+}
+
+Название файла
+featureCollection.ts
+export type Position = number[];
+
+export type Geometry =
+    | { type: "Point"; coordinates: Position }
+    | { type: "MultiPoint"; coordinates: Position[] }
+    | { type: "LineString"; coordinates: Position[] }
+    | { type: "MultiLineString"; coordinates: Position[][] }
+    | { type: "Polygon"; coordinates: Position[][] }
+    | { type: "MultiPolygon"; coordinates: Position[][][] }
+    | { type: "GeometryCollection"; geometries: Geometry[] }
+    | null;
+
+export type GeoJsonProperties = Record<string, unknown> | null;
+
+export interface Feature<
+    G extends Geometry | null = Geometry | null,
+    P = GeoJsonProperties
+> {
+    type: "Feature";
+    geometry: G;
+    properties: P;
+    id?: string | number | null;
+}
+
+export interface FeatureCollection<
+    G extends Geometry | null = Geometry | null,
+    P = GeoJsonProperties
+> {
+    type: "FeatureCollection";
+    features: Array<Feature<G, P>>;
+}
+
+export type FeatureCollectionsMap = Record<string, FeatureCollection>;
+
+Название файла
+indicator.ts
+export default interface Indicator {
+    id?: number,
+    code: string,
+    name?: string,
+    units?: string
+    value?: number | string | undefined | null
+}
+
+Название файла
+selectedDates.ts
+import type { CalendarDate } from "@internationalized/date";
+
+export default interface SelectedDates { start: CalendarDate, end: CalendarDate }
+
+Название файла
+site.ts
+export default interface Site {
+    id: number,
+    name: string,
+    timing: string,
+    code: string,
+    dtaCode?: string,
+    geom_x: number,
+    geom_y: number,
+    geom_alt: number
+}
+
+Название файла
+siteData.ts
+export default interface SiteData {
+    [key: string]: string | number | undefined,
+    "time"?: string,
+    "site"?: number,
+    "i371"?: number,
+    "iaqi"?: number,
+    "m-h"?: number,
+    "m-p"?: number,
+    "m-t"?: number,
+    "p-pm10"?: number,
+    "p-pm2"?: number
+}
+
+Название файла
+timeline.ts
+export interface Point {
+    time: string,
+    type: 'point',
+    background: string,
+    value?: number,
+    text?: string
+}
+
+export type TimelineMode = 'hour' | 'day'
+
+export interface PointBorder {
+    time: string
+    type: 'pointBorder',
+}
+
+export interface Transition {
+    oldDayEndIndex: number,
+    newDayStartIndex: number,
+    oldDay: string | null,
+    newDay: string | null,
+    transitionPoint: number
+}
+
+export type Points = Array<Point | PointBorder>
+
+export interface Timeline {
+    mode: TimelineMode,
+    points: Points
+}
+
+

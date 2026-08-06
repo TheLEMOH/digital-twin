@@ -1,0 +1,1 @@
+import{_ as t,c as a,a as o,r as s,o as c}from"./CPYlRCv8.js";import"./PPVm8Dsz.js";const d={},r={class:"layout"},n={class:"layout-body"};function _(e,l){return c(),a("div",r,[o("div",n,[s(e.$slots,"default",{},void 0,!0)])])}const u=t(d,[["render",_],["__scopeId","data-v-018aa3df"]]);export{u as default};
