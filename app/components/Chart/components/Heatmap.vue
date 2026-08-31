@@ -8,6 +8,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 echarts.use([TitleComponent, GridComponent, LineChart, CanvasRenderer, LegendComponent, UniversalTransition, TooltipComponent, VisualMapComponent, HeatmapChart]);
 
 const { series } = defineProps(['series'])
+const emit = defineEmits(['click'])
 
 const ctx = useTemplateRef('chart')
 
@@ -17,29 +18,50 @@ onMounted(() => {
     const option = {
         tooltip: {
             trigger: 'axis',
+            appendToBody: true,
+            confine: true,
+            textStyle: { fontSize: 12 },
             formatter: (p) => {
                 const items = p.filter(d => d.data[2] != null);
+
                 if (!items.length) return '';
+
                 const time = items[0].data[0]
-                const rows = items.sort((a, b) => a.data[1] - b.data[1])
-                    .map(d => `${d.data[1]}м: ${d.data[2]}°C`).join('<br/>');
-                return `<b>${time}</b><br/>${rows}`;
+                const rows = items
+                    .map(d => `<div style="display:flex;justify-content:space-between;">
+                        <span>${d.data[1]}м</span>
+                        <span>${d.data[2].toFixed(2)}°C</span></div>`)
+                    .join('');
+                const sum = p.at(-1)?.data[1]
+                const sumRow = sum != null
+                    ? `<div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid #e0e0e0;font-weight:600;">
+                        <span>Сумма</span>
+                        <span>${Number(sum).toFixed(2)}°C</span></div>`
+                    : '';
+                return `<b>${time}</b><br/>${rows}${sumRow}`;
             }
         },
         grid: {
             left: '10px',
-            right: '0px',
-            top: '10px',
+            right: '10px',
+            top: '0px',
             bottom: '0px',
         },
         xAxis: {
             type: 'category',
-            splitLine: { show: true }
+            splitLine: { show: true, lineStyle: { color: '#f0f0f0' } }
         },
-        yAxis: {
-            type: 'category',
-            splitLine: { show: true }
-        },
+        yAxis: [
+            {
+                type: 'category',
+                splitLine: { show: true, lineStyle: { color: '#f0f0f0' } }
+            },
+            {
+                type: 'value',
+                show: false,
+                min: 0,
+            }
+        ],
         legend: { show: false },
         visualMap: {
             show: false,
@@ -68,6 +90,12 @@ onMounted(() => {
     };
 
     myChart.setOption(option)
+
+    myChart.on('click', (params) => {
+        if (params && params.data) {
+            emit('click', params.data[0])
+        }
+    })
 
     watch(() => series, (value) => {
         myChart.setOption({ series: value })

@@ -22,7 +22,7 @@ export default function useSiteDialog() {
 
     const siteData = shallowRef<Site[]>([])
     const selectedSites = ref<number[]>([])
-    const mode = ref<string>('avg')
+    const mode = ref<string>('default')
 
     selectedSites.value.push(selectedFeature?.value.properties.id)
 

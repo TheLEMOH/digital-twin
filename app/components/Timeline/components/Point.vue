@@ -19,7 +19,7 @@ const view = computed(() => {
 </script>
 
 <template>
-    <UPopover mode="hover" arrow :dismissible="false">
+    <UTooltip mode="hover" :delay-duration="0" arrow :dismissible="false">
         <div :class="[isSelected ? 'selected' : '', 'point']" @click="emits('onClick')">
             <div :class="['point-circle']" :style="{ background: item.background }"></div>
             <div class="point-text">
@@ -32,7 +32,7 @@ const view = computed(() => {
                 <span> Среднее <b>{{ item.value!.toFixed(2) }}</b> </span>
             </div>
         </template>
-    </UPopover>
+    </UTooltip>
 </template>
 
 <style scoped>

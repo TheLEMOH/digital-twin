@@ -2,10 +2,11 @@
 import Line from '~/components/Chart/components/Line.vue';
 import useProfilerDialog from '../composables/useProfilerDialog';
 import Heatmap from '~/components/Chart/components/Heatmap.vue';
+import VerticalProfile from './VerticalProfile.vue';
 
 const openDialogProfiler = inject<Ref<boolean>>('openDialogProfiler')
 
-const { profilerChart, inversionChart } = useProfilerDialog()
+const { profilerChart, inversionChart, verticalProfileChart, selectedTime, onProfileTimeClick } = useProfilerDialog()
 
 </script>
 
@@ -13,8 +14,10 @@ const { profilerChart, inversionChart } = useProfilerDialog()
     <UModal v-model:open="openDialogProfiler" fullscreen title="Температурный профилемер">
         <template #body>
             <div class="parent">
-                <Line :series="profilerChart" class="div2"></Line>
-                <Heatmap :series="inversionChart" class="div3"></Heatmap>
+                <VerticalProfile :series="verticalProfileChart" :selectedTime="selectedTime" class="div1">
+                </VerticalProfile>
+                <Line :series="profilerChart" class="div2" @click="onProfileTimeClick"></Line>
+                <Heatmap :series="inversionChart" class="div3" @click="onProfileTimeClick"></Heatmap>
             </div>
         </template>
     </UModal>

@@ -4,7 +4,7 @@ import type SiteData from "~/types/siteData";
 import type Site from "~/types/site";
 import type { FeatureCollectionsMap } from "~/types/featureCollection";
 
-const createSiteFeature = (site: Site, data: SiteData): GeoJSON.Feature => {
+export const createSiteFeature = (site: Site, data: SiteData): GeoJSON.Feature => {
     return {
         type: "Feature",
         properties: {
@@ -18,7 +18,7 @@ const createSiteFeature = (site: Site, data: SiteData): GeoJSON.Feature => {
     };
 };
 
-const createSiteFeatureCollection = (sites: Site[], data: SiteData[]): FeatureCollectionsMap => {
+export const createSiteFeatureCollection = (sites: Site[], data: SiteData[]): FeatureCollectionsMap => {
     const groupedByHour = groupByHour<SiteData>(data)
 
     const res: FeatureCollectionsMap = {}
@@ -46,5 +46,3 @@ const createSiteFeatureCollection = (sites: Site[], data: SiteData[]): FeatureCo
 
     return res
 };
-
-export { createSiteFeatureCollection };

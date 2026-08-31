@@ -1,6 +1,6 @@
 import type { SeriesOption } from "echarts";
 
-interface DataItem {
+export interface DataItem {
     time: string;
     site: number;
     'm-t': number;
@@ -29,8 +29,16 @@ interface DataItem {
     t_h0000: number;
 }
 
+type DepthKey = Exclude<keyof DataItem, 'time' | 'site' | 'm-t'>;
 
-const heightMap: Record<string, number> = {
+interface InversionPoint {
+    name: string;
+    coord: [number, number];
+    value: string;
+    label: { color: string; fontWeight: number };
+}
+
+const heightMap: Record<DepthKey, number> = {
     "t_h1000": 1000,
     "t_h0950": 950,
     "t_h0900": 900,
@@ -56,33 +64,98 @@ const heightMap: Record<string, number> = {
     "t_h0000": 0
 };
 
+const depthKeys = Object.keys(heightMap) as DepthKey[];
+const sortedDepthKeys = depthKeys.slice().sort((a, b) => heightMap[a] - heightMap[b]);
+
 export function createProfilerChart(data: DataItem[]): SeriesOption[] {
-    const keys = Object.keys(heightMap);
-    return keys.map(key => ({
+    return depthKeys.map(key => ({
         name: heightMap[key] + ' м',
         type: 'line',
-        data: data.map((item: any) => [item.time, item[key]]),
+        data: data.map((item): [string, number] => [item.time, item[key]]),
         symbolSize: 3
     }));
 }
 
-export function createInversionChart(data: DataItem[]): SeriesOption {
-    const sortedKeys = Object.keys(heightMap).sort((a, b) => heightMap[a]! - heightMap[b]!);
+export function createInversionChart(data: DataItem[]): SeriesOption[] {
     const heatmapData: [string, number, number | null][] = [];
+    const lineData: [string, number | null][] = [];
 
     data.forEach(item => {
         const timeMs = item.time;
-        for (let i = 1; i < sortedKeys.length; i++) {
-            const curKey = sortedKeys[i];
-            const prevKey = sortedKeys[i - 1];
+        let sum = 0;
+        for (let i = 1; i < sortedDepthKeys.length; i++) {
+            const curKey = sortedDepthKeys[i]!;
+            const prevKey = sortedDepthKeys[i - 1]!;
             const height = heightMap[curKey];
             const delta = item[curKey] - item[prevKey];
             heatmapData.push([timeMs, height, delta > 0 ? +delta.toFixed(3) : null]);
+            if (delta > 0) {
+                sum += delta;
+            }
         }
+        lineData.push([timeMs, sum > 0 ? +sum.toFixed(3) : null]);
     });
 
+    return [
+        {
+            type: 'heatmap',
+            data: heatmapData,
+        },
+        {
+            name: 'Сумма инверсии',
+            type: 'line',
+            yAxisIndex: 1,
+            smooth: true,
+            symbolSize: 4,
+            lineStyle: { width: 2, color: '#d33' },
+            itemStyle: { color: '#d33' },
+            data: lineData,
+        },
+    ];
+}
+
+export function createVerticalProfileChart(item: DataItem): SeriesOption {
+    const data: [number, number][] = sortedDepthKeys.map(key => [item[key], heightMap[key]]);
+
+    const inversionPoints: InversionPoint[] = [];
+
+    for (let i = 1; i < sortedDepthKeys.length; i++) {
+        const curKey = sortedDepthKeys[i]!;
+        const prevKey = sortedDepthKeys[i - 1]!;
+        const delta = item[curKey] - item[prevKey];
+        if (delta > 0) {
+            const midHeight = (heightMap[prevKey] + heightMap[curKey]) / 2;
+            const midTemp = (item[prevKey] + item[curKey]) / 2;
+            inversionPoints.push({
+                name: `инверсия ${midHeight}м`,
+                coord: [midTemp, midHeight],
+                value: `${delta.toFixed(2)}°C`,
+                label: { color: delta < 0.5 ? '#2d7dd2' : '#d33', fontWeight: 600 },
+            });
+        }
+    }
+
     return {
-        type: 'heatmap',
-        data: heatmapData,
+        type: 'line',
+        data,
+        symbolSize: 4,
+        lineStyle: { type: 'solid' },
+        markPoint: {
+            symbol: 'circle',
+            symbolSize: 1,
+            label: {
+                show: true,
+                formatter: '{c}',
+                fontSize: 10,
+                color: '#d33',
+                position: 'right',
+                distance: 10,
+                backgroundColor: 'transparent',
+                borderWidth: 0,
+                shadowBlur: 0,
+            },
+            itemStyle: { color: 'rgba(255, 82, 82, 0)' },
+            data: inversionPoints,
+        },
     };
 }

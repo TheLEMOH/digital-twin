@@ -12,7 +12,12 @@ const selectedIndicator = inject<ShallowRef<Indicator>>('selectedIndicator')!
 const openDialogProfiler = inject<ShallowRef<boolean>>('openDialogProfiler')!
 
 const open = () => {
+
     openDialogProfiler.value = true
+
+    if (document.activeElement) {
+        document.activeElement.blur();
+    }
 }
 
 const value = computed({
@@ -30,7 +35,9 @@ const value = computed({
 
 <template>
     <div class="indicators">
-        <UButton icon="i-lucide-chart-column" @click="open"></UButton>
+        <UTooltip text="Данные профилемера" :delay-duration="0" :content="{ side: 'top' }">
+            <UButton icon="i-lucide-chart-column" @click="open"></UButton>
+        </UTooltip>
         <USelect v-model="value" :items="items" value-key="code" label-key="name" style="width: 300px;">
             <template #item="{ item }">
                 {{ item.name }} ({{ item.units }})

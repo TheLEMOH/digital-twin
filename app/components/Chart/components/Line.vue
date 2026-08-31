@@ -10,6 +10,7 @@ import { ToolboxComponent } from 'echarts/components';
 echarts.use([GridComponent, LineChart, CanvasRenderer, MarkLineComponent, UniversalTransition, TooltipComponent, DataZoomComponent, ToolboxComponent]);
 
 const { series } = defineProps(['series'])
+const emit = defineEmits(['click'])
 
 const ctx = useTemplateRef('chart')
 
@@ -18,16 +19,9 @@ onMounted(() => {
 
     const option = {
         animation: false,
-        /*   toolbox: {
-              feature: {
-                  dataZoom: { 
-                      yAxisIndex: 'none'
-                  },
-                  restore: {},
-              }
-          }, */
         tooltip: {
             trigger: 'axis',
+            confine: true,
             padding: [4, 8],
             textStyle: { fontSize: 12 },
             borderWidth: 0,
@@ -48,7 +42,8 @@ onMounted(() => {
         grid: {
             left: '10px',
             right: '10px',
-            top: '40px',
+            top: '10px',
+            bottom: '40px',
             lineStyle: {
                 color: '#e0e0e0',
                 width: 1,
@@ -58,7 +53,7 @@ onMounted(() => {
         xAxis: [
             {
                 type: 'time',
-                splitLine: { show: true }
+                splitLine: { show: true, lineStyle: { color: '#f0f0f0' } }
             },
         ],
         /* dataZoom: [
@@ -75,7 +70,7 @@ onMounted(() => {
         yAxis: [
             {
                 type: 'value',
-                splitLine: { show: true }
+                splitLine: { show: true, lineStyle: { color: '#f0f0f0' } }
             },
         ],
         series: series
@@ -83,13 +78,19 @@ onMounted(() => {
 
     myChart.setOption(option)
 
-    watch(() => series, (value) => {
+    myChart.on('click', (params) => {
+        if (params && params.data) {
+            emit('click', params.data[0])
+        }
+    })
 
+    watch(() => series, (value) => {
         const yAxis = value.map(v => {
             return {
                 type: 'value',
                 splitLine: {
-                    show: false,
+                    show: true,
+                    lineStyle: { color: '#f0f0f0' },
                 }
             }
         })
