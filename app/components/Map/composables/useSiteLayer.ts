@@ -65,12 +65,25 @@ export default function useSiteLayer({ map, features, selectedDate }: UseSiteLay
 
         watch(features, () => {
             const data = getData(features.value, selectedDate.value)
-            getGeoJSONSource(map).setData(data);
+
+            if (data)
+                getGeoJSONSource(map).setData(data);
+            else
+                getGeoJSONSource(map).setData({
+                    type: 'FeatureCollection',
+                    features: []
+                });
         });
 
         watch(selectedDate, (date) => {
             const data = getData(features.value, date)
-            getGeoJSONSource(map).setData(data);
+            if (data)
+                getGeoJSONSource(map).setData(data);
+            else
+                getGeoJSONSource(map).setData({
+                    type: 'FeatureCollection',
+                    features: []
+                });
         });
     });
 }

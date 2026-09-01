@@ -91,10 +91,12 @@ onMounted(() => {
 
     myChart.setOption(option)
 
-    myChart.on('click', (params) => {
-        if (params && params.data) {
-            emit('click', params.data[0])
-        }
+    myChart.getZr().on('click', (params) => {
+        const pointInPixel = [params.offsetX, params.offsetY];
+        const pointInGrid = myChart.convertFromPixel('grid', pointInPixel);
+        const xIndex = pointInGrid[0] * 23
+        const value = series[0].data[xIndex][0]
+        emit('click', value)
     })
 
     watch(() => series, (value) => {

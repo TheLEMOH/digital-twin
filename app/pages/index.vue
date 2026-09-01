@@ -38,9 +38,9 @@ const selectedFeature = inject('selectedFeature')
 
 const { selectedSiteGroup } = useSiteSettings()
 
-const { sites, features, setData, indicators, dataGroupedByHour, avgByDate, loading } = await useSite({ selectedDate, selectedDates, selectedSiteGroup })
+const { sites, features, setData, filteredSetData, indicators, dataGroupedByHour, avgByDate, loading } = await useSite({ selectedDate, selectedDates, selectedSiteGroup })
 const { selectedTiffIndicator, tiffOpacity, selectedBand, tiffFilterRange } = useTiffSettings()
-const { existDate } = useExistDates({ setData, selectedIndicator })
+const { existDate } = useExistDates({ setData: filteredSetData, selectedIndicator })
 const { dataGroupedBySite } = useDataGroupedBySite({ setData })
 const { openDialogProfiler } = useProfilerSettings()
 

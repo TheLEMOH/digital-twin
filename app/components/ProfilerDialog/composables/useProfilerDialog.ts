@@ -32,9 +32,7 @@ export default function useProfilerDialog() {
     }, { immediate: true })
 
     function onProfileTimeClick(time: string) {
-
         selectedTime.value = time
-
         const item = profilerData.value.find(d => d.time === time)
         if (item) {
             verticalProfileChart.value = createVerticalProfileChart(item)

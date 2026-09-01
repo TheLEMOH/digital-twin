@@ -7,7 +7,8 @@ import type { Point, Points, Timeline, TimelineMode, Transition } from "~/types/
 
 export function createPoints(points: string[], backgrounds: any, indicator: Indicator): Points {
     return points.map((item) => {
-        const background = backgrounds[item][indicator.code] || { color: "#fff", value: 0 }
+
+        const background = backgrounds[item] ? backgrounds[item][indicator.code] : { color: "#fff", value: 0 }
 
         return {
             time: item,
@@ -34,6 +35,11 @@ export function setTransition(points: Points, transition: Transition[]) {
 }
 
 export function createTimeline({ borders, points, backgrounds, indicator }: { borders: SelectedDates, points: string[], backgrounds: any, indicator: Indicator }): Timeline {
+
+    if (Object.keys(backgrounds).length === 0) {
+        return { mode: 'hour', points: [] }
+    }
+
     const transition: Transition[] = findDayChangeIndex(points)
     const timelineMode: TimelineMode = getDiff(borders.start, borders.end) < 5 ? 'hour' : 'day'
     const newPoints: Points = createPoints(points, backgrounds, indicator)

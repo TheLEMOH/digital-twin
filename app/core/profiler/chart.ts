@@ -105,7 +105,6 @@ export function createInversionChart(data: DataItem[]): SeriesOption[] {
             name: 'Сумма инверсии',
             type: 'line',
             yAxisIndex: 1,
-            smooth: true,
             symbolSize: 4,
             lineStyle: { width: 2, color: '#d33' },
             itemStyle: { color: '#d33' },

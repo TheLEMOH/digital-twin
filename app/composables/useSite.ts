@@ -20,7 +20,7 @@ const getData = async ({ begin, end, dta, dataService, indicators, selectedSiteG
     const filteredData = siteDataFilter(data, filteredSites)
     const collection = createSiteFeatureCollection(filteredSites, filteredData)
     const avgData = avg(filteredData, indicators)
-    return { data, collection, avgData, sitesDta }
+    return { data, collection, avgData, sitesDta, filteredData }
 }
 
 export default async function useSite({ selectedDates, selectedDate, selectedSiteGroup }:
@@ -30,6 +30,7 @@ export default async function useSite({ selectedDates, selectedDate, selectedSit
 
     const features = shallowRef<FeatureCollectionsMap>({})
     const setData = shallowRef<SiteData[]>([])
+    const filteredSetData = shallowRef<SiteData[]>([])
     const sites = shallowRef<Site[]>([])
 
     const avgByDate = shallowRef({})
@@ -38,11 +39,12 @@ export default async function useSite({ selectedDates, selectedDate, selectedSit
 
     loading.value = true
 
-    const { data, collection, avgData, sitesDta } =
+    const { data, collection, avgData, sitesDta, filteredData } =
         await getData({ begin: selectedDates!.value.start, end: selectedDates!.value.end, dta, dataService, indicators, selectedSiteGroup: selectedSiteGroup.value })
             .finally(() => loading.value = false)
 
     setData.value = data
+    filteredSetData.value = filteredData
     features.value = collection
     avgByDate.value = avgData
     sites.value = sitesDta
@@ -51,8 +53,9 @@ export default async function useSite({ selectedDates, selectedDate, selectedSit
         loading.value = true
 
         getData({ begin: value.start, end: value.end, dta, dataService, indicators, selectedSiteGroup: selectedSiteGroup.value })
-            .then(({ data, collection, avgData }) => {
+            .then(({ data, collection, avgData, filteredData }) => {
                 setData.value = data
+                filteredSetData.value = filteredData
                 features.value = collection
                 avgByDate.value = avgData
 
@@ -67,9 +70,11 @@ export default async function useSite({ selectedDates, selectedDate, selectedSit
         const filteredSites = siteFilter(sites.value, value)
         const filteredData = siteDataFilter(setData.value, filteredSites)
 
+        filteredSetData.value = filteredData
+
         features.value = createSiteFeatureCollection(filteredSites, filteredData)
         avgByDate.value = avg(filteredData, indicators)
     })
 
-    return { sites, features, setData, indicators, avgByDate, loading }
+    return { sites, features, setData, filteredSetData, indicators, avgByDate, loading }
 }

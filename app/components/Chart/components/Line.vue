@@ -78,9 +78,16 @@ onMounted(() => {
 
     myChart.setOption(option)
 
-    myChart.on('click', (params) => {
-        if (params && params.data) {
-            emit('click', params.data[0])
+    myChart.getZr().on('click', (params) => {
+        const MS_IN_HOUR = 3600000;
+
+        const pointInPixel = [params.offsetX, params.offsetY];
+        const pointInGrid = myChart.convertFromPixel('grid', pointInPixel);
+        const x = new Date(pointInGrid[0])
+        const time = new Date(Math.round(x / MS_IN_HOUR) * MS_IN_HOUR)
+
+        if (time) {
+            emit('click', time.toLocaleString('sv-SE'))
         }
     })
 

@@ -23,10 +23,10 @@ export const avg = (setData: SiteData[], indicators: Indicator[]) => {
                 return acc + +v;
             }, 0);
 
-            avg = sum / day.length || 0
+            avg = sum / day.length
 
-
-            res[i][code] = avg
+            if (avg)
+                res[i][code] = avg
         }
     })
 
