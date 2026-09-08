@@ -1,14 +1,48 @@
 <script setup>
 import * as echarts from 'echarts/core';
-import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, VisualMapComponent } from 'echarts/components';
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, VisualMapComponent, MarkLineComponent } from 'echarts/components';
 import { LineChart, HeatmapChart } from 'echarts/charts';
 import { UniversalTransition } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
 
-echarts.use([TitleComponent, GridComponent, LineChart, CanvasRenderer, LegendComponent, UniversalTransition, TooltipComponent, VisualMapComponent, HeatmapChart]);
+echarts.use([TitleComponent, GridComponent, LineChart, CanvasRenderer, LegendComponent, UniversalTransition, TooltipComponent, VisualMapComponent, HeatmapChart, MarkLineComponent]);
 
-const { series } = defineProps(['series'])
+const { series, selectedTime } = defineProps(['series', 'selectedTime'])
+
 const emit = defineEmits(['click'])
+
+function makeMarkLine(time) {
+    if (!time) return [];
+    return [{
+        xAxis: time,
+        lineStyle: {
+            color: '#cccccc',
+            width: 2,
+            type: 'dashed'
+        },
+        label: {
+            show: true,
+            formatter: '{b}',
+            position: 'insideEndTop',
+            color: '#d33',
+            fontSize: 10
+        }
+    }];
+}
+
+function applyMarkLine(seriesValue, time) {
+    const mark = makeMarkLine(time)
+    return seriesValue.map((s, i) => ({ ...s, id: `inv-series-${i}`, markLine: mark.length ? { symbol: 'none', data: mark } : undefined }))
+}
+
+function markLineOnly(time) {
+    const mark = makeMarkLine(time)
+    if (!mark.length) return []
+    return series.map((s, i) => ({
+        id: `inv-series-${i}`,
+        markLine: { symbol: 'none', data: mark }
+    }))
+}
 
 const ctx = useTemplateRef('chart')
 
@@ -16,10 +50,15 @@ onMounted(() => {
     const myChart = echarts.init(ctx.value);
 
     const option = {
+        animation: false,
         tooltip: {
             trigger: 'axis',
             appendToBody: true,
-            confine: true,
+            transitionDuration: 0,
+            position: (point, params, dom, rect, size) => {
+                const [w, h] = size.contentSize;
+                return [point[0] + 14, size.viewSize[1] - h - 28];
+            },
             textStyle: { fontSize: 12 },
             formatter: (p) => {
                 const items = p.filter(d => d.data[2] != null);
@@ -28,17 +67,17 @@ onMounted(() => {
 
                 const time = items[0].data[0]
                 const rows = items
-                    .map(d => `<div style="display:flex;justify-content:space-between;">
+                    .map(d => `<div style="display:flex;justify-content:space-between;gap:16px;white-space:nowrap;">
                         <span>${d.data[1]}м</span>
                         <span>${d.data[2].toFixed(2)}°C</span></div>`)
                     .join('');
                 const sum = p.at(-1)?.data[1]
                 const sumRow = sum != null
-                    ? `<div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid #e0e0e0;font-weight:600;">
+                    ? `<div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px solid #e0e0e0;font-weight:600;white-space:nowrap;">
                         <span>Сумма</span>
                         <span>${Number(sum).toFixed(2)}°C</span></div>`
                     : '';
-                return `<b>${time}</b><br/>${rows}${sumRow}`;
+                return `<b style="white-space:nowrap;">${time}</b><br/>${rows}${sumRow}`;
             }
         },
         grid: {
@@ -86,7 +125,7 @@ onMounted(() => {
             }
         },
 
-        series: series
+        series: applyMarkLine(series, selectedTime)
     };
 
     myChart.setOption(option)
@@ -94,23 +133,35 @@ onMounted(() => {
     myChart.getZr().on('click', (params) => {
         const pointInPixel = [params.offsetX, params.offsetY];
         const pointInGrid = myChart.convertFromPixel('grid', pointInPixel);
-        const xIndex = pointInGrid[0] * 23
-        const value = series[0].data[xIndex][0]
-        emit('click', value)
+        const hourIndex = Math.round(pointInGrid[0]);
+        const hourData = series.find(s => s.type === 'line')?.data;
+        const value = hourData?.[hourIndex]?.[0];
+        if (value != null) {
+            emit('click', value)
+        }
     })
 
     watch(() => series, (value) => {
-        myChart.setOption({ series: value })
+        myChart.setOption({ animation: false, series: applyMarkLine(value, selectedTime) })
+    })
+
+    watch(() => selectedTime, (value) => {
+        const updates = markLineOnly(value)
+        if (updates.length) {
+            myChart.setOption({ animation: false, series: updates })
+        }
     })
 
     const handleResize = () => {
-        requestAnimationFrame(() => {
-            myChart?.resize();
-        });
+        myChart?.resize();
     };
 
-    window.addEventListener('resize', async function () {
-        handleResize()
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(ctx.value);
+
+    onUnmounted(() => {
+        resizeObserver.disconnect();
+        myChart.dispose();
     });
 })
 </script>
@@ -123,5 +174,6 @@ onMounted(() => {
 .chart {
     width: 100%;
     height: 100%;
+
 }
 </style>

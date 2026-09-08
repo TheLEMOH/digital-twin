@@ -96,6 +96,7 @@ const modes = [
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
+    min-width: 0;
 }
 
 .wrapper-settings {

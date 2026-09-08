@@ -17,7 +17,9 @@ onMounted(() => {
     const option = {
         animation: false,
         tooltip: {
+            transitionDuration: 0,
             trigger: 'axis',
+            appendToBody: true,
             confine: true,
             triggerOn: 'mousemove',
             axisPointer: {
@@ -65,15 +67,18 @@ onMounted(() => {
         });
     };
 
-    window.addEventListener('resize', function () {
-        handleResize()
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(ctx.value);
+
+    onUnmounted(() => {
+        resizeObserver.disconnect();
+        myChart.dispose();
     });
 })
 </script>
 
 <template>
     <div class="vertical-profile">
-        {{ selectedTime }}
         <div class="chart" ref="chart"></div>
     </div>
 </template>
@@ -87,5 +92,6 @@ onMounted(() => {
 .chart {
     width: 100%;
     height: 100%;
+    overflow: hidden;
 }
 </style>

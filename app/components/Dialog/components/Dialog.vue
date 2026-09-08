@@ -41,6 +41,7 @@ const { chartData, indicators } = useDialog()
     border-radius: 6px;
     display: flex;
     gap: 0.5rem;
+    min-width: 0;
 }
 
 

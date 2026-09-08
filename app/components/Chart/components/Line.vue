@@ -9,8 +9,27 @@ import { ToolboxComponent } from 'echarts/components';
 
 echarts.use([GridComponent, LineChart, CanvasRenderer, MarkLineComponent, UniversalTransition, TooltipComponent, DataZoomComponent, ToolboxComponent]);
 
-const { series } = defineProps(['series'])
+const { series, selectedTime } = defineProps(['series', 'selectedTime'])
 const emit = defineEmits(['click'])
+
+function makeMarkLine(time) {
+    if (!time) return [];
+    return [{
+        xAxis: time,
+        lineStyle: {
+            color: '#cccccc',
+            width: 2,
+            type: 'dashed'
+        },
+        label: {
+            show: true,
+            formatter: '{b}',
+            position: 'insideEndTop',
+            color: '#d33',
+            fontSize: 10
+        }
+    }];
+}
 
 const ctx = useTemplateRef('chart')
 
@@ -21,8 +40,10 @@ onMounted(() => {
         animation: false,
         tooltip: {
             trigger: 'axis',
+            appendToBody: true,
             confine: true,
             padding: [4, 8],
+            transitionDuration: 0,
             textStyle: { fontSize: 12 },
             borderWidth: 0,
             backgroundColor: 'rgba(255, 255, 255, 0.92)',
@@ -73,7 +94,7 @@ onMounted(() => {
                 splitLine: { show: true, lineStyle: { color: '#f0f0f0' } }
             },
         ],
-        series: series
+        series: applyMarkLine(series, selectedTime)
     };
 
     myChart.setOption(option)
@@ -88,6 +109,13 @@ onMounted(() => {
 
         if (time) {
             emit('click', time.toLocaleString('sv-SE'))
+        }
+    })
+
+    watch(() => selectedTime, (value) => {
+        const updates = markLineOnly(value)
+        if (updates.length) {
+            myChart.setOption({ series: updates })
         }
     })
 
@@ -111,8 +139,22 @@ onMounted(() => {
         option.yAxis = yAxis
         option.xAxis = xAxis
 
-        myChart.setOption({ ...option, ...yAxis, series: value }, true)
+        myChart.setOption({ ...option, ...yAxis, series: applyMarkLine(value, selectedTime) }, true)
     })
+
+    function applyMarkLine(seriesValue, time) {
+        const mark = makeMarkLine(time)
+        return seriesValue.map((s, i) => ({ ...s, id: `line-series-${i}`, markLine: mark.length ? { symbol: 'none', data: mark } : undefined }))
+    }
+
+    function markLineOnly(time) {
+        const mark = makeMarkLine(time)
+        if (!mark.length) return []
+        return series.map((s, i) => ({
+            id: `line-series-${i}`,
+            markLine: { symbol: 'none', data: mark }
+        }))
+    }
 
     const handleResize = () => {
         requestAnimationFrame(() => {
@@ -120,8 +162,12 @@ onMounted(() => {
         });
     };
 
-    window.addEventListener('resize', async function () {
-        handleResize()
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(ctx.value);
+
+    onUnmounted(() => {
+        resizeObserver.disconnect();
+        myChart.dispose();
     });
 })
 
@@ -135,5 +181,6 @@ onMounted(() => {
 .chart {
     width: 100%;
     height: 100%;
+    overflow: hidden;
 }
 </style>

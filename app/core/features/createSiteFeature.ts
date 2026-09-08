@@ -19,7 +19,7 @@ export const createSiteFeature = (site: Site, data: SiteData): GeoJSON.Feature =
 };
 
 export const createSiteFeatureCollection = (sites: Site[], data: SiteData[]): FeatureCollectionsMap => {
-    const groupedByHour = groupByHour<SiteData>(data)
+    const groupedByHour = groupByHour(data)
 
     const res: FeatureCollectionsMap = {}
 

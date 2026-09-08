@@ -3,7 +3,7 @@ import type SiteData from "~/types/siteData"
 import groupByHour from "../group/groupByHour"
 
 export const avg = (setData: SiteData[], indicators: Indicator[]) => {
-    const grouped = groupByHour<SiteData>(setData)
+    const grouped = groupByHour(setData)
 
     const res: any = {}
 

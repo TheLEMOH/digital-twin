@@ -11,7 +11,6 @@ export function avgByPeriod(data: SiteData[], indicators: Indicator[]) {
 
     const codes = indicators.map(ind => ind.code);
 
-    // Инициализация с использованием Map для избежания undefined
     const sums = new Map<string, number>();
     const counts = new Map<string, number>();
     const mins = new Map<string, number>();
@@ -43,7 +42,6 @@ export function avgByPeriod(data: SiteData[], indicators: Indicator[]) {
             }
 
             if (numericValue !== null) {
-                // Используем !, так как мы точно знаем, что ключ есть
                 sums.set(code, (sums.get(code) || 0) + numericValue);
                 counts.set(code, (counts.get(code) || 0) + 1);
                 if (numericValue < (mins.get(code) || Infinity)) {

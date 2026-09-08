@@ -1,5 +1,7 @@
-export default function groupByHour<T>(data: any[]) {
-    const grouped: Record<string, T[]> = {};
+import type SiteData from "~/types/siteData";
+
+export default function groupByHour(data: SiteData[]) {
+    const grouped: Record<string, SiteData[]> = {};
 
     data.forEach(item => {
         const dateTime = item.time;

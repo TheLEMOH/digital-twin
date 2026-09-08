@@ -6,7 +6,6 @@ export default defineAppConfig({
         card: {
             slots: {
                 root: 'flex flex-col',
-
             },
         },
         accordion: {

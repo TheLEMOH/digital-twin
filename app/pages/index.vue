@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang='ts'>
 import Map from '~/components/Map/components/Map.vue';
 import useMap from '~/components/Map/composables/useMap';
 import useTerrain from '~/components/Map/composables/useTerrain';
@@ -11,7 +11,6 @@ import ButtonSidebar from '~/components/Sidebar/components/ButtonSidebar.vue';
 import Sidebar from '~/components/Sidebar/components/Sidebar.vue';
 import usePolygons from '~/components/Map/composables/useFill';
 import useFillExtrusion from '~/components/Map/composables/useFillExtrusion';
-import Dialog from '~/components/Dialog/components/Dialog.vue';
 import useVoronoi from '~/components/Map/composables/useVoronoi';
 import useDeckGL from '~/components/Map/composables/useDeckGL';
 import useExistDates from '~/composables/useExistDate';
@@ -20,8 +19,10 @@ import useDates from '~/composables/useDates';
 import Progress from '~/components/Loading/components/Progress.vue';
 import useTwinTiles from '~/components/Map/composables/useTwinTiles';
 import BackButton from '~/components/Navigation/components/BackButton.vue';
-import SiteSlider from '~/components/SiteDialog/components/SiteSlider.vue';
 import ProfilerDialog from '~/components/ProfilerDialog/components/ProfilerDialog.vue';
+import type Indicator from '~/types/indicator';
+import type { ShallowRef } from 'vue';
+import type { Feature } from 'maplibre-gl';
 
 useHead({
     title: 'Сценариум - КНЦ СО РАН'
@@ -33,12 +34,14 @@ definePageMeta({
 
 const { selectedDate, selectedDates } = useDates()
 
-const selectedIndicator = inject('selectedIndicator')
-const selectedFeature = inject('selectedFeature')
+const selectedIndicator = inject<ShallowRef<Indicator>>('selectedIndicator')!
+const selectedFeature = inject<ShallowRef<Feature | null>>('selectedFeature')
+
+const featureKey = computed(() => { return selectedFeature?.value?.properties.id })
 
 const { selectedSiteGroup } = useSiteSettings()
 
-const { sites, features, setData, filteredSetData, indicators, dataGroupedByHour, avgByDate, loading } = await useSite({ selectedDate, selectedDates, selectedSiteGroup })
+const { sites, features, setData, filteredSetData, indicators, avgByDate, loading } = await useSite({ selectedDate, selectedDates, selectedSiteGroup })
 const { selectedTiffIndicator, tiffOpacity, selectedBand, tiffFilterRange } = useTiffSettings()
 const { existDate } = useExistDates({ setData: filteredSetData, selectedIndicator })
 const { dataGroupedBySite } = useDataGroupedBySite({ setData })
@@ -70,7 +73,6 @@ provide('selectedSiteGroup', selectedSiteGroup)
 provide('openDialogProfiler', openDialogProfiler)
 provide('setData', setData)
 provide('dataGroupedBySite', dataGroupedBySite)
-provide('dataGroupedByHour', dataGroupedByHour)
 provide('indicators', indicators)
 provide('sites', sites)
 provide('features', features)
@@ -78,13 +80,14 @@ provide('features', features)
 
 <template>
     <Progress v-if="loading"></Progress>
+
     <BackButton></BackButton>
     <Map></Map>
     <Indicators :items="indicators"></Indicators>
     <Legend></Legend>
     <Timeline :items="existDate" :avg="avgByDate"></Timeline>
 
-    <SiteDialog v-if="selectedFeature" :key="selectedFeature"></SiteDialog>
+    <SiteDialog v-if="selectedFeature" :key="featureKey"></SiteDialog>
     <!--  <SiteSlider v-if="selectedFeature" :key="selectedFeature"> </SiteSlider> -->
 
     <ProfilerDialog></ProfilerDialog>

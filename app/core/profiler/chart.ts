@@ -106,8 +106,13 @@ export function createInversionChart(data: DataItem[]): SeriesOption[] {
             type: 'line',
             yAxisIndex: 1,
             symbolSize: 4,
-            lineStyle: { width: 2, color: '#d33' },
-            itemStyle: { color: '#d33' },
+            lineStyle: {
+                width: 2,
+                color: '#d33'
+            },
+            itemStyle: {
+                color: '#d33',
+            },
             data: lineData,
         },
     ];

@@ -17,6 +17,7 @@ onMounted(() => {
     const option = {
         tooltip: {
             trigger: 'axis',
+            appendToBody: true,
 
         },
         grid: {
@@ -61,12 +62,16 @@ onMounted(() => {
         myChart.setOption({ series: value })
     })
 
-    window.addEventListener('resize', function () {
+    const resizeObserver = new ResizeObserver(() => {
         myChart.resize();
     });
+    resizeObserver.observe(ctx.value);
+
+    onUnmounted(() => {
+        resizeObserver.disconnect();
+        myChart.dispose();
+    });
 })
-
-
 
 </script>
 
@@ -78,5 +83,5 @@ onMounted(() => {
 .chart {
     width: 100%;
     height: 100%;
-}
-</style>
+    overflow: hidden;
+}</style>
