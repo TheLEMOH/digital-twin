@@ -64,7 +64,7 @@ onMounted(() => {
             left: '10px',
             right: '10px',
             top: '10px',
-            bottom: '40px',
+            bottom: '25px',
             lineStyle: {
                 color: '#e0e0e0',
                 width: 1,

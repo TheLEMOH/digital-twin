@@ -76,6 +76,7 @@ provide('dataGroupedBySite', dataGroupedBySite)
 provide('indicators', indicators)
 provide('sites', sites)
 provide('features', features)
+provide('avgByDate', avgByDate)
 </script>
 
 <template>
