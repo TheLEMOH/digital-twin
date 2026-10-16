@@ -6,6 +6,7 @@ import type SiteData from "~/types/siteData"
 import type { FeatureCollectionsMap } from "~/types/featureCollection"
 import type Indicator from "~/types/indicator"
 import { avg } from "~/core/avg/avg"
+import { statsByHour } from "~/core/avg/statsByHour"
 import type SelectedDates from "~/types/selectedDates"
 import type Site from "~/types/site"
 import { siteDataFilter, siteFilter } from "~/core/filters/siteFilter"
@@ -17,7 +18,8 @@ const getData = async ({ begin, end, sites, indicators, selectedSiteGroup }:
     const filteredData = siteDataFilter(data, filteredSites)
     const collection = createSiteFeatureCollection(filteredSites, filteredData)
     const avgData = avg(filteredData, indicators)
-    return { data, collection, avgData, filteredData }
+    const statsData = statsByHour(filteredData, indicators)
+    return { data, collection, avgData, statsData, filteredData }
 }
 
 export default async function useSite({ selectedDates, selectedDate, selectedSiteGroup }:
@@ -31,6 +33,7 @@ export default async function useSite({ selectedDates, selectedDate, selectedSit
     const sites = shallowRef<Site[]>([])
 
     const avgByDate = shallowRef({})
+    const statsByDate = shallowRef({})
 
     const { sites: allSites, indicators } = await monitoring.getDta()
 
@@ -38,11 +41,12 @@ export default async function useSite({ selectedDates, selectedDate, selectedSit
         loading.value = true
 
         getData({ begin: value.start, end: value.end, sites: allSites, indicators, selectedSiteGroup: selectedSiteGroup.value })
-            .then(({ data, collection, avgData, filteredData }) => {
+            .then(({ data, collection, avgData, statsData, filteredData }) => {
                 setData.value = data
                 filteredSetData.value = filteredData
                 features.value = collection
                 avgByDate.value = avgData
+                statsByDate.value = statsData
                 sites.value = allSites
 
                 if (selectedDate)
@@ -60,7 +64,8 @@ export default async function useSite({ selectedDates, selectedDate, selectedSit
 
         features.value = createSiteFeatureCollection(filteredSites, filteredData)
         avgByDate.value = avg(filteredData, indicators)
+        statsByDate.value = statsByHour(filteredData, indicators)
     })
 
-    return { sites, features, setData, filteredSetData, indicators, avgByDate, loading }
+    return { sites, features, setData, filteredSetData, indicators, avgByDate, statsByDate, loading }
 }

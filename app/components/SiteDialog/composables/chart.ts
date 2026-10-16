@@ -1,95 +1,108 @@
 import type { SeriesOption } from "echarts";
 import type Indicator from "~/types/indicator";
 import type Site from "~/types/site";
-import lineColor from "~/core/color/lineColor.json"
+import type SiteData from "~/types/siteData";
+import lineColor from "~/core/color/lineColor.json";
 import calculateHourlyAverage from "./avg";
 import fillMissingData from "./empty";
 
+export type ChartPoint = [string, number | null] | null;
+
+const LINE_COLORS = lineColor as Record<string, string>;
+
 interface Props {
-    siteData: Site[],
-    indicator: Indicator,
-    indexY: number,
-    code: string,
+    siteData: Site[];
+    indicator: Indicator;
+    indexY: number;
+    code: string;
 }
 
 export interface ChartStrategy {
-    createChart(options: Props): SeriesOption[]
+    createChart(options: Props): SeriesOption[];
+}
+
+function lineColorFor(code: string): string {
+    return LINE_COLORS[code] ?? "#000000";
+}
+
+export function toChartPoints(data: SiteData[] | undefined, code: string): ChartPoint[] {
+    return (data ?? []).map(entry => {
+        const value = entry[code];
+
+        if (value === undefined || value === null) return null;
+
+        const numeric = Number(value);
+
+        return Number.isFinite(numeric) ? [entry.time, numeric] : null;
+    });
+}
+
+interface LineOptions {
+    name: string;
+    data: ChartPoint[];
+    code: string;
+    yAxisIndex: number;
+    xAxisIndex?: number;
+}
+
+function createLine({ name, data, code, yAxisIndex, xAxisIndex }: LineOptions): SeriesOption {
+    return {
+        data,
+        type: "line",
+        name,
+        showSymbol: true,
+        symbolSize: 2,
+        yAxisIndex,
+        ...(xAxisIndex === undefined ? {} : { xAxisIndex }),
+        itemStyle: { color: lineColorFor(code) },
+    };
 }
 
 export class DefaultStrategy implements ChartStrategy {
     createChart({ siteData, indicator, indexY, code }: Props): SeriesOption[] {
-        return siteData.map((site) => {
-            const data = site.data?.map(d => d[code || 0] ? [d.time, d[code || 0] || null] : null, { groupId: indicator?.name })
-            const color = indicator?.code ? lineColor[indicator.code as keyof typeof lineColor] : '#000000';
-
-            return {
-                data: data || [],
-                type: 'line',
-                name: `${site.name}. ${indicator?.name}`,
-                showSymbol: true,
-                yAxisIndex: indexY,
-                symbolSize: 2,
-                itemStyle: { color }
-            }
-        })
+        return siteData.map(site => createLine({
+            name: `${site.name}. ${indicator.name}`,
+            data: toChartPoints(site.data, code),
+            code,
+            yAxisIndex: indexY,
+        }));
     }
 }
 
 export class AvgStrategy implements ChartStrategy {
     createChart({ siteData, indicator, indexY, code }: Props): SeriesOption[] {
-        const series = siteData.map((site) => {
-            const data = site.data?.map(d => [d.time, d[code || 0] || null])
-            return data
-        })
+        const pointsPerSite = siteData.map(site => toChartPoints(site.data, code));
 
-        const avg = calculateHourlyAverage(series)
-        const color = indicator?.code ? lineColor[indicator.code as keyof typeof lineColor] : '#000000';
-
-        return [{
-            data: avg || [],
-            type: 'line',
-            name: `${indicator?.name}`,
-            showSymbol: true,
+        return [createLine({
+            name: indicator.name ?? "",
+            data: calculateHourlyAverage(pointsPerSite),
+            code,
             yAxisIndex: indexY,
-            symbolSize: 2,
-
-            itemStyle: { color }
-        }]
+        })];
     }
 }
 
 export class YearStrategy implements ChartStrategy {
     createChart({ siteData, indicator, indexY, code }: Props): SeriesOption[] {
-        return siteData.map((site, indexX) => {
-            const data = site.data?.map(d => d[code || 0] ? [d.time, d[code || 0] || null] : null, { groupId: indicator?.name })
-            const { start: startDate, end: endDate } = site
-            const color = indicator?.code ? lineColor[indicator.code as keyof typeof lineColor] : '#000000';
-
-            const fillData = fillMissingData(data, startDate, endDate)
-
-            return {
-                data: fillData || [],
-                type: 'line',
-                name: `${site.name}. ${indicator?.name}`,
-                showSymbol: true,
-                yAxisIndex: indexY,
-                xAxisIndex: indexX,
-                symbolSize: 2,
-                itemStyle: { color }
-            }
-        })
+        return siteData.map((site, indexX) => createLine({
+            name: `${site.name}. ${indicator.name}`,
+            data: fillMissingData(toChartPoints(site.data, code), site.start, site.end),
+            code,
+            yAxisIndex: indexY,
+            xAxisIndex: indexX,
+        }));
     }
 }
 
-const defaultStrategy = new DefaultStrategy()
-const avgStrategy = new AvgStrategy()
-const yearStrategy = new YearStrategy()
-
 interface Strategies {
-    [key: string]: ChartStrategy
-    default: ChartStrategy,
-    avg: ChartStrategy,
-    year: ChartStrategy,
+    [key: string]: ChartStrategy;
+    default: ChartStrategy;
+    avg: ChartStrategy;
+    year: ChartStrategy;
 }
 
-export const chartStrategies: Strategies = { default: defaultStrategy, avg: avgStrategy, year: yearStrategy }
+export const chartStrategies: Strategies = {
+    default: new DefaultStrategy(),
+    avg: new AvgStrategy(),
+    year: new YearStrategy(),
+};

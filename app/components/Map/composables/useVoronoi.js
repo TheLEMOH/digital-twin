@@ -3,7 +3,7 @@ import * as turf from "@turf/turf";
 import colorer from "~/core/colorer";
 
 const createGrid = ({ collection, date, indicator, bbox }) => {
-    const points = { type: 'FeatureCollection', features: collection[date].features.filter(p => p.properties[indicator]) }
+    const points = { type: 'FeatureCollection', features: collection[date].features.filter(p => p.properties[indicator] !== undefined && p.properties[indicator] !== null) }
     const grid = turf.interpolate(points, 1, { gridType: "points", property: indicator, });
 
     const polygons = turf.voronoi(grid, { bbox });
@@ -43,6 +43,11 @@ export default function useVoronoi({ map, features, selectedDate }) {
         }, 'site');
 
 
+        const setVoronoiData = (polygons) => {
+            const source = map.getSource('voronoiTest')
+            if (source) source.setData(polygons)
+        }
+
         watch(selectedIndicator, indicator => {
             const { code } = indicator
             const date = selectedDate.value
@@ -50,21 +55,22 @@ export default function useVoronoi({ map, features, selectedDate }) {
 
             const polygons = createGrid({ collection: features.value, date: date, indicator: code, bbox })
 
-            map.setPaintProperty('voronoiTest', 'fill-color', [
-                'interpolate',
-                ['linear'],
-                ['get', code],
-                ...scheme
-            ])
+            if (map.getLayer('voronoiTest'))
+                map.setPaintProperty('voronoiTest', 'fill-color', [
+                    'interpolate',
+                    ['linear'],
+                    ['get', code],
+                    ...scheme
+                ])
 
-            map.getSource('voronoiTest').setData(polygons)
+            setVoronoiData(polygons)
         })
 
         watch(selectedDate, date => {
             const code = selectedIndicator.value.code
             const polygons = createGrid({ collection: features.value, date: date, indicator: code, bbox })
 
-            map.getSource('voronoiTest').setData(polygons)
+            setVoronoiData(polygons)
         })
 
         watch(visibleVoronoi, value => {

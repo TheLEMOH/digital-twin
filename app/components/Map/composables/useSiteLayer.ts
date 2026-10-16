@@ -12,11 +12,19 @@ interface UseSiteLayerParams {
 }
 
 function getGeoJSONSource(map: Map) {
-    return map.getSource('site') as maplibregl.GeoJSONSource;
+    return map.getSource('site') as maplibregl.GeoJSONSource | undefined;
 }
 
 function getData(features: FeatureCollectionsMap, date: string) {
     return features[date] || ''
+}
+
+function setSiteData(map: Map, data: GeoJSON.GeoJSON | '', code?: string) {
+    const source = getGeoJSONSource(map);
+
+    if (!source) return;
+
+    source.setData(data || { type: 'FeatureCollection', features: [] });
 }
 
 export default function useSiteLayer({ map, features, selectedDate }: UseSiteLayerParams): void {
@@ -25,11 +33,12 @@ export default function useSiteLayer({ map, features, selectedDate }: UseSiteLay
     const selectedFeature = inject<ShallowRef<Feature | null>>('selectedFeature')!;
 
     map.on('load', () => {
-        const collection = createSiteCollection(features.value[selectedDate.value]!, { name: 'site' });
+        const initialData = features.value[selectedDate.value] || { type: 'FeatureCollection', features: [] };
+        const collection = createSiteCollection(initialData, { name: 'site' });
 
         collection.forEach(c => {
-            map.addSource(c.name, c.sources);
-            map.addLayer(c.layer);
+            if (!map.getSource(c.name)) map.addSource(c.name, c.sources);
+            if (!map.getLayer(c.layer.id)) map.addLayer(c.layer);
         });
 
         map.on('click', 'site', (e) => {
@@ -61,29 +70,16 @@ export default function useSiteLayer({ map, features, selectedDate }: UseSiteLay
 
             map.setFilter(nameLayer, ['has', code]);
             map.setFilter(nameTextLayer, ['has', code]);
+
+            setSiteData(map, getData(features.value, selectedDate.value), code);
         }, { immediate: true });
 
         watch(features, () => {
-            const data = getData(features.value, selectedDate.value)
-
-            if (data)
-                getGeoJSONSource(map).setData(data);
-            else
-                getGeoJSONSource(map).setData({
-                    type: 'FeatureCollection',
-                    features: []
-                });
+            setSiteData(map, getData(features.value, selectedDate.value), selectedIndicator.value?.code);
         });
 
         watch(selectedDate, (date) => {
-            const data = getData(features.value, date)
-            if (data)
-                getGeoJSONSource(map).setData(data);
-            else
-                getGeoJSONSource(map).setData({
-                    type: 'FeatureCollection',
-                    features: []
-                });
+            setSiteData(map, getData(features.value, date), selectedIndicator.value?.code);
         });
     });
 }

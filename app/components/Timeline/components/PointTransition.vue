@@ -12,7 +12,7 @@ const { item } = defineProps<Props>()
 <template>
     <div class="point">
         <div :class="['point-circle']"></div>
-        <span class="point-text">
+        <span class="point-text text-sm">
             {{ item.time }}
         </span>
     </div>
@@ -22,7 +22,6 @@ const { item } = defineProps<Props>()
 .point {
     position: relative;
     display: flex;
-    font-size: 1rem;
     flex-direction: column;
     align-items: center;
     justify-content: space-around;
@@ -32,14 +31,15 @@ const { item } = defineProps<Props>()
 
 .point-text {
     font-weight: 500;
-    color: var(--ui-text);
+    color: #000;
+    margin-top: 0.15rem;
 }
 
 .point-circle {
-    width: 1px;
-    height: 20px;
-    border: 3px solid #000;
+    width: 2px;
+    height: 12px;
     background: #000;
-    border-radius: 20px;
+    border: none;
+    border-radius: 2px;
 }
 </style>
