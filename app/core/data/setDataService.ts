@@ -1,46 +1,63 @@
 import formateDate from "~/scripts/formate"
-import type Dta from "~/types/dta"
+import type SiteData from "~/types/siteData"
+import type { DataSourceConfig, TimeInterval } from "~/types/dataSource"
+
+const BASE_URL = "https://sensor.krasn.ru/hub/api/3.0/sets/"
+const CACHE_LIMIT = 200
+
+export interface ArchiveQuery {
+    codeDta: string,
+    begin: string,
+    end: string,
+    timeInterval: TimeInterval,
+    sites?: number | number[]
+}
 
 export default class SetDataService {
-    URL: string
-    uid: string
+    private readonly uid: string
+    private readonly cache = new Map<string, Promise<unknown[]>>()
 
-    constructor({ uid }: { uid: string }) {
-        this.URL = `https://sensor.krasn.ru/hub/api/3.0/sets/`
+    constructor({ uid }: Pick<DataSourceConfig, 'uid'>) {
         this.uid = uid
     }
 
-    setParams(options: any, url: URL) {
-        for (let option in options) {
-            if (options[option])
-                url.searchParams.set(option, options[option])
-        }
+    getData<T = SiteData>({ codeDta, begin, end, timeInterval, sites }: ArchiveQuery): Promise<T[]> {
+        const url = this.getUrl({ codeDta, begin, end, timeInterval, sites })
+        const key = url.toString()
+
+        const cached = this.cache.get(key)
+        if (cached) return cached as Promise<T[]>
+
+        const promise = fetch(key)
+            .then(res => res.json())
+            .then(res => (res.data ?? []) as T[])
+            .catch(error => {
+                this.cache.delete(key)
+                throw error
+            })
+
+        this.setCache(key, promise)
+
+        return promise
     }
 
-    async getDataById({ begin, end, timeInterval, codeDta, id }: { begin: string, end: string, timeInterval: string, codeDta: string, id: number }) {
-
-        const url = new URL(`${codeDta}/data/archive`, this.URL)
-
-        const options = {
-            'time_begin': `${formateDate(begin)} 00:00:00`,
-            'time_end': `${formateDate(end)} 23:59:00`,
-            'uid': this.uid,
-            'time_interval': timeInterval,
-            'sites': id
-        }
-
-        this.setParams(options, url)
-
-        const promise = await fetch(url.toString()).then((res) => res.json())
-
-        return promise.data
+    clearCache() {
+        this.cache.clear()
     }
 
-    async getDataByDta({ begin, end, timeInterval, codeDta, sites }: { begin: string, end: string, timeInterval: string, codeDta: string, sites?: number[] }) {
+    private setCache(key: string, promise: Promise<unknown[]>) {
+        if (this.cache.size >= CACHE_LIMIT) {
+            const oldest = this.cache.keys().next().value
+            if (oldest) this.cache.delete(oldest)
+        }
 
-        const url = new URL(`${codeDta}/data/archive`, this.URL)
+        this.cache.set(key, promise)
+    }
 
-        const options = {
+    private getUrl({ codeDta, begin, end, timeInterval, sites }: ArchiveQuery): URL {
+        const url = new URL(`${codeDta}/data/archive`, BASE_URL)
+
+        const options: Record<string, string | number | number[] | undefined> = {
             'time_begin': `${formateDate(begin)} 00:00:00`,
             'time_end': `${formateDate(end)} 23:59:00`,
             'uid': this.uid,
@@ -48,42 +65,12 @@ export default class SetDataService {
             'sites': sites
         }
 
-        this.setParams(options, url)
+        for (const option in options) {
+            const value = options[option]
+            if (!value) continue
+            url.searchParams.set(option, String(value))
+        }
 
-        const promise = await fetch(url.toString()).then((res) => res.json())
-
-        return promise.data
-    }
-
-    async getData({ dta, begin, end, timeInterval, sites }: { dta: Dta[], begin: string, end: string, timeInterval: string, sites?: string[] }) {
-
-        const promises = dta.map(set => {
-
-            const url = new URL(`${set.code}/data/archive`, this.URL)
-
-            const options = {
-                'time_begin': `${formateDate(begin)} 00:00:00`,
-                'time_end': `${formateDate(end)} 23:59:00`,
-                'uid': this.uid,
-                'time_interval': timeInterval,
-                'sites': sites
-            }
-
-            this.setParams(options, url)
-
-            const promise = fetch(url.toString()).then((res) => res.json())
-
-            return promise
-        })
-
-        const res = await Promise.all(promises).then((res) => {
-            const arrays: any = []
-
-            res.forEach(r => arrays.push(...r.data))
-
-            return arrays
-        })
-
-        return res
+        return url
     }
 }

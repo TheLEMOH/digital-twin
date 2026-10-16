@@ -1,6 +1,6 @@
 import type { SeriesOption } from 'echarts';
 import type { ShallowRef } from 'vue';
-import dataServiceProfiler from '~/core/data/registerProfiler'
+import { profiler } from '~/core/data/register'
 import { createAvgChart } from '~/core/avg/createAvgChart';
 import { createIndicatorNames } from '~/core/indicator/indicator';
 import { createInversionChart, createProfilerChart, createVerticalProfileChart, type DataItem } from '~/core/profiler/chart';
@@ -23,31 +23,30 @@ export default function useProfilerDialog() {
     const profilerData = shallowRef<DataItem[]>([])
     const selectedTime = ref<string>('')
 
-    function updateAvgChart() {
-        const code = indicatorCode.value
-        const name = indicatorNames[code] || selectedIndicator.value.name || code
-
-        avgChart.value = createAvgChart(avgByDate?.value, code, name)
-    }
-
     watch(selectedIndicator, (indicator) => {
         indicatorCode.value = indicator.code || ''
     })
 
-    watch([avgByDate, indicatorCode], updateAvgChart, { immediate: true })
+    watch([avgByDate, indicatorCode], ([newAvg, newCode]) => {
+        const code = indicatorCode.value
+        const name = indicatorNames[code] || selectedIndicator.value.name || code
+        
+        avgChart.value = createAvgChart(avgByDate?.value, code, name)
+    }, { immediate: true })
 
     watch(selectedDates, async (value) => {
         const begin = value.start.toString()
         const end = value.end.toString()
 
-        const result = await dataServiceProfiler.setDataService.getDataById({ begin, end, timeInterval: 'hour', codeDta: 'knc-mtp5', id: 4310 })
+        const result = await profiler.getDataBySite<DataItem>({ begin, end, timeInterval: 'hour' })
 
         profilerChart.value = createProfilerChart(result)
         inversionChart.value = createInversionChart(result)
         profilerData.value = result
 
-        if (result.length) {
-            const first = result[0]
+        const first = result[0]
+
+        if (first) {
             selectedTime.value = first.time
             verticalProfileChart.value = createVerticalProfileChart(first)
         }

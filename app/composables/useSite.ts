@@ -1,8 +1,6 @@
-import dataService from "~/core/data/register"
+import { monitoring } from "~/core/data/register"
 import { createSiteFeatureCollection } from "~/core/features/createSiteFeature"
 import type { CalendarDate } from "@internationalized/date"
-import type Dta from "~/types/dta"
-import type DataService from "~/core/data/dataService"
 import type { ShallowRef } from "vue"
 import type SiteData from "~/types/siteData"
 import type { FeatureCollectionsMap } from "~/types/featureCollection"
@@ -12,15 +10,14 @@ import type SelectedDates from "~/types/selectedDates"
 import type Site from "~/types/site"
 import { siteDataFilter, siteFilter } from "~/core/filters/siteFilter"
 
-const getData = async ({ begin, end, dta, dataService, indicators, selectedSiteGroup }:
-    { begin: CalendarDate, end: CalendarDate, dta: Dta[], dataService: DataService, indicators: Indicator[], selectedSiteGroup: [string] }) => {
-    const data = await dataService.getData({ begin, end, dta })
-    const sitesDta = dta.map(i => i.sites).flat()
-    const filteredSites = siteFilter(sitesDta, selectedSiteGroup)
+const getData = async ({ begin, end, sites, indicators, selectedSiteGroup }:
+    { begin: CalendarDate, end: CalendarDate, sites: Site[], indicators: Indicator[], selectedSiteGroup: [string] }) => {
+    const data = await monitoring.getData({ begin, end })
+    const filteredSites = siteFilter(sites, selectedSiteGroup)
     const filteredData = siteDataFilter(data, filteredSites)
     const collection = createSiteFeatureCollection(filteredSites, filteredData)
     const avgData = avg(filteredData, indicators)
-    return { data, collection, avgData, sitesDta, filteredData }
+    return { data, collection, avgData, filteredData }
 }
 
 export default async function useSite({ selectedDates, selectedDate, selectedSiteGroup }:
@@ -35,36 +32,25 @@ export default async function useSite({ selectedDates, selectedDate, selectedSit
 
     const avgByDate = shallowRef({})
 
-    const { dta, indicators } = await dataService.getDta()
-
-    loading.value = true
-
-    const { data, collection, avgData, sitesDta, filteredData } =
-        await getData({ begin: selectedDates!.value.start, end: selectedDates!.value.end, dta, dataService, indicators, selectedSiteGroup: selectedSiteGroup.value })
-            .finally(() => loading.value = false)
-
-    setData.value = data
-    filteredSetData.value = filteredData
-    features.value = collection
-    avgByDate.value = avgData
-    sites.value = sitesDta
+    const { sites: allSites, indicators } = await monitoring.getDta()
 
     watch(selectedDates, async (value) => {
         loading.value = true
 
-        getData({ begin: value.start, end: value.end, dta, dataService, indicators, selectedSiteGroup: selectedSiteGroup.value })
+        getData({ begin: value.start, end: value.end, sites: allSites, indicators, selectedSiteGroup: selectedSiteGroup.value })
             .then(({ data, collection, avgData, filteredData }) => {
                 setData.value = data
                 filteredSetData.value = filteredData
                 features.value = collection
                 avgByDate.value = avgData
+                sites.value = allSites
 
                 if (selectedDate)
                     selectedDate.value = `${value.start.toString()} 00:00:00`
 
             })
             .finally(() => loading.value = false)
-    })
+    }, { immediate: true })
 
     watch(selectedSiteGroup, async (value) => {
         const filteredSites = siteFilter(sites.value, value)

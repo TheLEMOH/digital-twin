@@ -1,10 +1,6 @@
-import getDiff from "~/core/time/getDiff";
-import SetDataService from "~/core/data/setDataService";
+import { monitoring } from "~/core/data/register";
 import { CalendarDate } from "@internationalized/date";
 import type Site from "~/types/site";
-
-const setDialogDataService = new SetDataService({ uid: 'khlnn3o37xah7pj2' })
-const cache = new Map()
 
 interface Props { selected: number[], timePeriod: any, sites: Site[] }
 
@@ -12,48 +8,17 @@ interface DataStrategy {
     getData(options: Props): Promise<Site[]>
 }
 
-const getOptions = (timePeriod: any) => {
-    const { start, end } = timePeriod;
-    const startStr = start.toString();
-    const endStr = end.toString();
-    const timeInterval = getDiff(start, end) < 5 ? 'hour' : 'day';
-    return { startStr, endStr, timeInterval }
-}
-
-const get = async ({ selected, timePeriod, sites }: { selected: number[], timePeriod: any, sites: Site[] }) => {
-    const { startStr, endStr, timeInterval } = getOptions(timePeriod)
+const get = async ({ selected, timePeriod, sites }: Props) => {
+    const begin = timePeriod.start.toString();
+    const end = timePeriod.end.toString();
 
     const finded = selected
         .map(id => sites.find(s => s.id === id))
         .filter((s): s is Site => s !== undefined)
 
-    const promises = finded.map(async (site) => {
+    const dataBySite = await monitoring.getDataBySites({ begin, end, sites: finded });
 
-        const { id, codeDta } = site
-
-        const dataFromCache = cache.get(`${startStr}/${endStr}/${site.id}`)
-
-        if (dataFromCache) {
-            return { data: dataFromCache, ...site }
-        }
-
-        else {
-            const data = await setDialogDataService.getDataById({
-                begin: startStr,
-                end: endStr,
-                timeInterval,
-                codeDta,
-                id
-            });
-
-            cache.set(`${startStr}/${endStr}/${site.id}`, data)
-
-            return { data, ...site, start: startStr, end: endStr }
-        }
-    });
-
-    return await Promise.all(promises)
-
+    return dataBySite.map(({ site, data }) => ({ ...site, data, start: begin, end }));
 }
 
 class DefaultStrategy implements DataStrategy {

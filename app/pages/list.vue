@@ -5,8 +5,7 @@ import BodyCalculation from '~/components/Сalculations/components/BodyCalculati
 import FilterCalculation from '~/components/Сalculations/components/FilterCalculation.vue';
 import HeaderCalculation from '~/components/Сalculations/components/HeaderCalculation.vue';
 import { avgByPeriod } from '~/core/avg/avgByPeriod';
-import dataService from '~/core/data/register';
-import dataServiceProfiler from '~/core/data/registerProfiler';
+import { air, profiler } from '~/core/data/register';
 import { analyzeInversions } from '~/core/profiler/inversion';
 import type { Calculation, MeteoSummary } from '~/types/calculation';
 
@@ -160,11 +159,11 @@ const items: Calculation[] = [
 
 const calculations = shallowRef<Calculation[]>([])
 
-const { dta, indicators } = await dataService.getDta()
+const { indicators } = await air.getDta()
 
 const promises = items.map(async item => {
-    const promise = dataService.setDataService.getDataByDta({ begin: item.dateFrom, end: item.dateTo, timeInterval: 'day', codeDta: 'dta-air' })
-    const promiseProfiler = dataServiceProfiler.setDataService.getDataById({ begin: item.dateFrom, end: item.dateTo, timeInterval: 'day', codeDta: 'knc-mtp5', id: 4310 })
+    const promise = air.getData({ begin: item.dateFrom, end: item.dateTo, timeInterval: 'day' })
+    const promiseProfiler = profiler.getDataBySite({ begin: item.dateFrom, end: item.dateTo, timeInterval: 'day' })
     const result = await promise
     const resultProfiler = await promiseProfiler
     return { data: result, dataProfiler: resultProfiler, item }

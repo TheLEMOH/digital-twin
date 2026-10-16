@@ -1,13 +1,14 @@
-import SetDataService from "./setDataService"
-import SetService from "./setService"
-import DataService from "./dataService"
+import createDataService from "./createDataService"
 
-const dta = ['dta-air', 'dta-gas']
-const uid = 'khlnn3o37xah7pj2'
+const monitoringUid = 'khlnn3o37xah7pj2'
+const profilerUid = 'nh0bmniqvqldilyq'
 
-const setService = new SetService({ dta, uid })
-const setDataService = new SetDataService({ uid })
-const dataService = new DataService({ setService, setDataService })
+const monitoring = createDataService({ uid: monitoringUid, dta: ['dta-air', 'dta-gas'] })
+const air = createDataService({ uid: monitoringUid, dta: ['dta-air'] })
+const profiler = createDataService({ uid: profilerUid, dta: ['knc-mtp5'], siteId: 4310 })
 
-export default dataService
+const services = { monitoring, air, profiler }
 
+export { monitoring, air, profiler }
+
+export default services

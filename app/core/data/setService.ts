@@ -1,33 +1,63 @@
-import type Dta from "~/types/dta"
 import createIndicators from "../indicator/indicator"
+import type Dta from "~/types/dta"
+import type { DataSourceConfig, Sets } from "~/types/dataSource"
+
+const BASE_URL = "https://sensor.krasn.ru/hub/api/3.0/sets/"
+
+const setsCache = new Map<string, Promise<Dta>>()
+
+function requestSet(code: string, uid: string): Promise<Dta> {
+    const key = `${uid}:${code}`
+
+    const cached = setsCache.get(key)
+    if (cached) return cached
+
+    const promise = fetch(`${BASE_URL}${code}?uid=${uid}`)
+        .then(res => res.json())
+        .then(res => res.data as Dta)
+        .catch(error => {
+            setsCache.delete(key)
+            throw error
+        })
+
+    setsCache.set(key, promise)
+
+    return promise
+}
 
 export default class SetService {
-    dta: string[]
-    uid: string
+    private readonly codes: string[]
+    private readonly uid: string
+    private cache: Promise<Sets> | null = null
 
-    constructor({ dta, uid }: { dta: string[], uid: string }) {
-        this.dta = dta
+    constructor({ dta, uid }: Pick<DataSourceConfig, 'dta' | 'uid'>) {
+        this.codes = dta
         this.uid = uid
     }
 
-    async getSets() {
-        const promises = this.dta.map(d => {
-            const promise = fetch(`https://sensor.krasn.ru/hub/api/3.0/sets/${d}?uid=khlnn3o37xah7pj2`).then((res) => res.json())
-            return promise
-        })
+    getSets(): Promise<Sets> {
+        if (!this.cache) {
+            this.cache = this.requestSets().catch(error => {
+                this.cache = null
+                throw error
+            })
+        }
 
-        const dta: any = await Promise.all(promises).then((res) => {
-            return res.map(r => r.data)
-        })
+        return this.cache
+    }
 
-        dta.forEach((d: any) => {
-            d.sites.forEach((site: any) => {
-                site.codeDta = d.code
+    private async requestSets(): Promise<Sets> {
+        const dta: Dta[] = await Promise.all(this.codes.map(code => requestSet(code, this.uid)))
+
+        dta.forEach(set => {
+            set.sites.forEach(site => {
+                site.codeDta = set.code
             })
         })
 
+        const sites = dta.flatMap(set => set.sites)
         const indicators = createIndicators(dta)
 
-        return { dta, indicators }
+        return { dta, sites, indicators }
     }
 }
