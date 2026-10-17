@@ -16,6 +16,7 @@ import useDeckGL from '~/components/Map/composables/useDeckGL';
 import useExistDates from '~/composables/useExistDate';
 import useDataGroupedBySite from '~/composables/useDataGroupedBySite';
 import useDates from '~/composables/useDates';
+import useSavedIntervals from '~/composables/useSavedIntervals';
 import Progress from '~/components/Loading/components/Progress.vue';
 import useTwinTiles from '~/components/Map/composables/useTwinTiles';
 import BackButton from '~/components/Navigation/components/BackButton.vue';
@@ -33,6 +34,8 @@ definePageMeta({
 })
 
 const { selectedDate, selectedDates } = useDates()
+
+const savedIntervals = useSavedIntervals({ selectedDates })
 
 const selectedIndicator = inject<ShallowRef<Indicator>>('selectedIndicator')!
 const selectedFeature = inject<ShallowRef<Feature | null>>('selectedFeature')
@@ -77,6 +80,7 @@ onMounted(async () => {
 provide('selectedDates', selectedDates)
 provide('selectedDate', selectedDate)
 /*  */
+provide('savedIntervals', savedIntervals)
 provide('selectedTiffIndicator', selectedTiffIndicator)
 provide('tiffOpacity', tiffOpacity)
 provide('selectedBand', selectedBand)

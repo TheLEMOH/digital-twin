@@ -48,6 +48,10 @@ const df = new DateFormatter('ru-RU', {
 
 const modelValue = shallowRef(selectedDates.value)
 
+watch(selectedDates, (value) => {
+    modelValue.value = value
+})
+
 const display = computed(() => {
     const start = df.format(modelValue.value.start.toDate(getLocalTimeZone()))
     return start
