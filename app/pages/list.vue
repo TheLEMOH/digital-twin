@@ -173,7 +173,7 @@ Promise.all(promises).then(data => {
     calculations.value = data.map(calculations => {
         const inversion = analyzeInversions(calculations.dataProfiler)
         const avgData = avgByPeriod(calculations.data, indicators)
-        const meteo: MeteoSummary[] = indicators.map(indicator => ({ value: avgData[indicator.code], ...indicator }))
+        const meteo: MeteoSummary[] = indicators.map(indicator => ({ ...indicator, value: avgData[indicator.code] }))
         return { meteo: meteo.filter(item => item.value?.avg), ...calculations.item, inversion }
     })
 })

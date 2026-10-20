@@ -12,7 +12,7 @@ import type Site from "~/types/site"
 import { siteDataFilter, siteFilter } from "~/core/filters/siteFilter"
 
 const getData = async ({ begin, end, sites, indicators, selectedSiteGroup }:
-    { begin: CalendarDate, end: CalendarDate, sites: Site[], indicators: Indicator[], selectedSiteGroup: [string] }) => {
+    { begin: CalendarDate, end: CalendarDate, sites: Site[], indicators: Indicator[], selectedSiteGroup: string[] }) => {
     const data = await monitoring.getData({ begin, end })
     const filteredSites = siteFilter(sites, selectedSiteGroup)
     const filteredData = siteDataFilter(data, filteredSites)
@@ -23,7 +23,7 @@ const getData = async ({ begin, end, sites, indicators, selectedSiteGroup }:
 }
 
 export default async function useSite({ selectedDates, selectedDate, selectedSiteGroup }:
-    { selectedDates: ShallowRef<SelectedDates>, selectedDate: ShallowRef<string>, selectedSiteGroup: ShallowRef<[string]> }) {
+    { selectedDates: ShallowRef<SelectedDates>, selectedDate: ShallowRef<string>, selectedSiteGroup: ShallowRef<string[]> }) {
 
     const loading = inject<ShallowRef<boolean>>('loading')!
 

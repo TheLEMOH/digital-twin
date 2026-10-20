@@ -2,7 +2,7 @@ import type { ShallowRef } from "vue";
 import { createBackgrounds, createTimeline } from "./timeline";
 import type Indicator from "~/types/indicator";
 import type { CalendarDate } from "@internationalized/date";
-import type { Point, Points, Range, StatsByHour, Timeline } from "~/types/timeline";
+import type { Point, Points, StatsByHour, Timeline } from "~/types/timeline";
 
 
 export default function useTimeline({ items, avg, stats }: { items: Ref<string[]>, avg: any, stats?: Ref<StatsByHour> }) {
@@ -17,59 +17,6 @@ export default function useTimeline({ items, avg, stats }: { items: Ref<string[]
     const backgrounds = computed(() => {
         return createBackgrounds(avg.value)
     })
-
-    const range = computed<Range | null>(() => {
-        const code = selectedIndicator?.value?.code
-        const data = stats?.value
-        if (!code || !data) return null
-
-        let min = Infinity
-        let max = -Infinity
-        let minTime: string | null = null
-        let maxTime: string | null = null
-        let minSite: number | null = null
-        let maxSite: number | null = null
-        let found = false
-
-        for (const key in data) {
-            const stat = data[key]?.[code]
-            if (!stat) continue
-            found = true
-            if (stat.min < min) {
-                min = stat.min
-                minTime = key
-                minSite = stat.minSite ?? null
-            }
-            if (stat.max > max) {
-                max = stat.max
-                maxTime = key
-                maxSite = stat.maxSite ?? null
-            }
-        }
-
-        return found ? { min, max, minTime, maxTime, minSite, maxSite } : null
-    })
-
-    const selectRangeEdge = (edge: 'min' | 'max') => {
-        const value = range.value
-        if (!value) return null
-
-        const time = edge == 'min' ? value.minTime : value.maxTime
-        const site = edge == 'min' ? value.minSite : value.maxSite
-
-        if (time) {
-            const index = timeline.value.points.findIndex(item => item.time == time)
-
-            if (index > -1) {
-                selectedIndex.value = index
-                page.value = Math.floor(index / itemsInPage)
-            }
-
-            if (selectedDate) selectedDate.value = time
-        }
-
-        return { time, site }
-    }
 
     const timeline = shallowRef<Timeline>({ mode: 'hour', points: [] })
 
@@ -169,8 +116,6 @@ export default function useTimeline({ items, avg, stats }: { items: Ref<string[]
         pressArrowRight,
         increasePage,
         decreasePage,
-        setSelected,
-        range,
-        selectRangeEdge
+        setSelected
     }
 }

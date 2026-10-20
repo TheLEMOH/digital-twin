@@ -23,7 +23,7 @@ import BackButton from '~/components/Navigation/components/BackButton.vue';
 import ProfilerDialog from '~/components/ProfilerDialog/components/ProfilerDialog.vue';
 import type Indicator from '~/types/indicator';
 import type { ShallowRef } from 'vue';
-import type { Feature, Map as MapLibreMap } from 'maplibre-gl';
+import type { Feature } from 'maplibre-gl';
 
 useHead({
     title: 'Сценариум - КНЦ СО РАН'
@@ -33,16 +33,16 @@ definePageMeta({
     layout: 'default',
 })
 
-const { selectedDate, selectedDates } = useDates()
-
-const savedIntervals = useSavedIntervals({ selectedDates })
-
 const selectedIndicator = inject<ShallowRef<Indicator>>('selectedIndicator')!
 const selectedFeature = inject<ShallowRef<Feature | null>>('selectedFeature')
 
-const featureKey = computed(() => { return selectedFeature?.value?.properties.id })
+const { selectedDate, selectedDates } = useDates()
 
 const { selectedSiteGroup } = useSiteSettings()
+
+const savedIntervals = useSavedIntervals({ selectedDates, selectedSiteGroup, selectedIndicator })
+
+const featureKey = computed(() => { return selectedFeature?.value?.properties.id })
 
 const { sites, features, setData, filteredSetData, indicators, avgByDate, statsByDate, loading } = await useSite({ selectedDate, selectedDates, selectedSiteGroup })
 const { selectedTiffIndicator, tiffOpacity, selectedBand, tiffFilterRange } = useTiffSettings()
@@ -50,27 +50,13 @@ const { existDate } = useExistDates({ setData: filteredSetData, selectedIndicato
 const { dataGroupedBySite } = useDataGroupedBySite({ setData })
 const { openDialogProfiler } = useProfilerSettings()
 
-const mapRef = shallowRef<MapLibreMap | null>(null)
-
-const focusSite = ({ site }: { site: number | null }) => {
-    const target = sites.value.find(s => s.id == site)
-    if (!target || !mapRef.value) return
-
-    mapRef.value.flyTo({
-        center: [target.geom_x, target.geom_y],
-        zoom: 15,
-        duration: 2000
-    })
-}
-
 onMounted(async () => {
     const { map: mapInstance } = useMap({ container: 'map' })
-    mapRef.value = mapInstance
 
     useSiteLayer({ map: mapInstance, features, selectedDate })
     usePolygons({ map: mapInstance })
     useFillExtrusion({ map: mapInstance })
-    useVoronoi({ map: mapInstance, features, selectedDate })
+   /*  useVoronoi({ map: mapInstance, features, selectedDate }) */
     useTerrain({ map: mapInstance })
     useDeckGL({ map: mapInstance })
     useTwinTiles({ map: mapInstance, selectedDate, selectedBand, tiffOpacity, selectedTiffIndicator, tiffFilterRange })
@@ -104,7 +90,7 @@ provide('avgByDate', avgByDate)
     <Map></Map>
     <Indicators :items="indicators"></Indicators>
     <Legend></Legend>
-    <Timeline :items="existDate" :avg="avgByDate" :stats="statsByDate" @focus-site="focusSite"></Timeline>
+    <Timeline :items="existDate" :avg="avgByDate" :stats="statsByDate"></Timeline>
 
     <SiteDialog v-if="selectedFeature" :key="featureKey"></SiteDialog>
     <!--  <SiteSlider v-if="selectedFeature" :key="selectedFeature"> </SiteSlider> -->

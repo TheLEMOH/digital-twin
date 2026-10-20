@@ -9,8 +9,6 @@ const selectedDate = inject('selectedDate')
 
 const { items, avg, stats } = defineProps(['items', 'avg', 'stats'])
 
-const emits = defineEmits(['updateDate', 'focusSite'])
-
 const {
     page,
     maxPage,
@@ -22,21 +20,7 @@ const {
     pressArrowRight,
     increasePage,
     decreasePage,
-    setSelected,
-    range,
-    selectRangeEdge } = useTimeline({ items: toRef(() => items), avg: toRef(() => avg), stats: toRef(() => stats) })
-
-const selectedIndicator = inject('selectedIndicator')
-
-const onRangeClick = (edge) => {
-    const target = selectRangeEdge(edge)
-    if (target && target.site !== null && target.site !== undefined) emits('focusSite', target)
-}
-
-const formatValue = (value) => {
-    if (value === undefined || value === null || !isFinite(value)) return '—'
-    return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(2)
-}
+    setSelected } = useTimeline({ items: toRef(() => items), avg: toRef(() => avg), stats: toRef(() => stats) })
 
 const isSelected = (item) => {
     return item.time == selectedDate.value
@@ -76,21 +60,6 @@ const setValidValue = () => {
         </UPopover>
 
         <span>{{ page + 1 }}/{{ maxPage }}</span>
-
-        <UTooltip v-if="range" :content="{ side: 'top' }" :ui="{ content: 'pointer-events-none' }"
-            text="Диапазон значений за период (мин — макс). Нажмите, чтобы перейти к посту и времени">
-            <div class="range text-xs">
-                <button type="button" class="range-item" title="Перейти к минимуму" @click="onRangeClick('min')">
-                    <i class="i-lucide-arrow-down-to-line"></i>
-                    {{ formatValue(range.min) }}
-                </button>
-                <button type="button" class="range-item" title="Перейти к максимуму" @click="onRangeClick('max')">
-                    <i class="i-lucide-arrow-up-to-line"></i>
-                    {{ formatValue(range.max) }}
-                </button>
-                <span class="range-units" v-if="selectedIndicator?.value?.units">{{ selectedIndicator.value.units }}</span>
-            </div>
-        </UTooltip>
 
         <div class="flex flex-col items-end">
             <UButton @click="decreasePage" icon="i-lucide-arrow-left"></UButton>
@@ -158,45 +127,5 @@ const setValidValue = () => {
     height: 3px;
     z-index: 0;
     background: #ddd;
-}
-
-.range {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
-    background: #f5f5f5;
-    border: 1px solid #ddd;
-    white-space: nowrap;
-}
-
-.range-item {
-    display: flex;
-    align-items: center;
-    gap: 0.2rem;
-    color: #000;
-    font-variant-numeric: tabular-nums;
-    border: none;
-    background: transparent;
-    padding: 0.1rem 0.2rem;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.range-item:hover {
-    background: #e5e5e5;
-}
-
-.range-item .i-lucide-arrow-down-to-line {
-    color: #3498db;
-}
-
-.range-item .i-lucide-arrow-up-to-line {
-    color: #e74c3c;
-}
-
-.range-units {
-    color: #666;
 }
 </style>

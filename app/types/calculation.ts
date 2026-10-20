@@ -1,3 +1,5 @@
+import type Indicator from "./indicator"
+
 export type MeteoStat = {
     avg: number | null
     min: number | null
@@ -28,6 +30,12 @@ export type Calculation = {
     dateFrom: string
     dateTo: string
     description: string
+    siteGroup?: string[],
+    indicator?: Indicator,
     inversion?: Inversion,
     meteo?: MeteoSummary[]
+}
+
+export type SavedInterval = Omit<Calculation, 'inversion'> & {
+    inversion?: number
 }

@@ -2,21 +2,10 @@ export interface HourStat {
     avg: number,
     min: number,
     max: number,
-    count: number,
-    minSite?: number | null,
-    maxSite?: number | null
+    count: number
 }
 
 export type StatsByHour = Record<string, Record<string, HourStat>>
-
-export interface Range {
-    min: number,
-    max: number,
-    minTime: string | null,
-    maxTime: string | null,
-    minSite: number | null,
-    maxSite: number | null
-}
 
 export interface Point {
     time: string,
@@ -26,8 +15,6 @@ export interface Point {
     min?: number,
     max?: number,
     count?: number,
-    minSite?: number | null,
-    maxSite?: number | null,
     text?: string
 }
 

@@ -1,85 +1,69 @@
 <script setup lang="ts">
 import colorer from '~/core/colorer'
-import type { Calculation } from '~/types/calculation'
+import type { MeteoSummary, SavedInterval } from '~/types/calculation'
 import type { SavedIntervals } from '~/composables/useSavedIntervals'
-import type Indicator from '~/types/indicator'
 import type SelectedDates from '~/types/selectedDates'
 import type { ShallowRef } from 'vue'
 
 interface Props {
-    item: Calculation
+    item: SavedInterval
 }
+
+type Badge = {
+    label: string
+    code: string
+    value: number
+    units?: string
+}
+
+const DAY_MS = 86_400_000
 
 const { item } = defineProps<Props>()
 
 const savedIntervals = inject<SavedIntervals>('savedIntervals')!
-const selectedIndicator = inject<ShallowRef<Indicator>>('selectedIndicator')
 const selectedDates = inject<ShallowRef<SelectedDates>>('selectedDates')
 
-const isActive = computed(() => {
-    if (!selectedDates?.value) return false
-    return selectedDates.value.start.toString() === item.dateFrom
-        && selectedDates.value.end.toString() === item.dateTo
-})
+const isActive = computed(() =>
+    selectedDates?.value?.start.toString() === item.dateFrom
+    && selectedDates?.value?.end.toString() === item.dateTo
+)
 
-const days = computed(() => {
-    const diff = new Date(item.dateTo).getTime() - new Date(item.dateFrom).getTime()
-    return Math.floor(diff / 86400000) + 1
-})
-
-const indicatorCode = computed(() => selectedIndicator?.value?.code)
-
-const indicatorStat = computed(() => {
-    if (!indicatorCode.value) return null
-    return item.meteo?.find(meteo => meteo.code === indicatorCode.value) ?? null
-})
-
-const pm25 = computed(() => item.meteo?.find(meteo => meteo.code === 'p-pm2'))
-const temperature = computed(() => item.meteo?.find(meteo => meteo.code === 'm-t'))
+const days = computed(() =>
+    Math.floor((new Date(item.dateTo).getTime() - new Date(item.dateFrom).getTime()) / DAY_MS) + 1
+)
 
 const inversion = computed(() => {
-    const value = +(item.inversion?.average ?? 0).toFixed(2)
-    return isNaN(value) ? 0 : value
+    const value = Number(item.inversion ?? 0)
+    return +value.toFixed(2)
 })
 
-const badges = computed(() => {
-    const list: { label: string, code?: string, value?: number | null, units?: string }[] = []
+const toBadges = (meteo: MeteoSummary): Badge => {
+    const value = meteo.value?.avg || 0
 
-    if (indicatorStat.value && indicatorStat.value.code !== 'p-pm2' && indicatorStat.value.code !== 'm-t') {
-        list.push({
-            label: indicatorStat.value.name ?? indicatorStat.value.code ?? '',
-            code: indicatorStat.value.code,
-            value: indicatorStat.value.value?.avg,
-            units: indicatorStat.value.units
-        })
+    return {
+        label: meteo.name || '',
+        code: meteo.code || '',
+        value,
+        units: meteo.units
     }
+}
 
-    if (pm25.value) {
-        list.push({ label: 'PM2.5', code: pm25.value.code, value: pm25.value.value?.avg, units: pm25.value.units })
-    }
+const badges = computed(() => (item.meteo ?? []).flatMap(toBadges))
 
-    if (temperature.value) {
-        list.push({ label: 'T', code: temperature.value.code, value: temperature.value.value?.avg, units: temperature.value.units })
-    }
-
-    return list.filter(badge => badge.value !== null && badge.value !== undefined)
-})
-
-const badgeStyle = (code?: string, value?: number | null) => {
-    if (!code || value === undefined || value === null || !colorer.schemes[code]) return {}
-
-    const background = colorer.paintSelf(code, value)
-
+const badgeStyle = (badge: Badge) => {
+    const background = colorer.paintSelf(badge.code, badge.value)
     return { background, color: `contrast-color(${background})` }
 }
 
 const formatDate = (value: string) => new Date(value).toLocaleDateString('ru-RU')
 
 const remove = () => savedIntervals.removeInterval(item.id)
+
 </script>
 
 <template>
-    <div class="saved-interval" :class="{ 'saved-interval--active': isActive }" @click="savedIntervals.loadInterval(item)">
+    <div class="saved-interval" :class="{ 'saved-interval--active': isActive }"
+        @click="savedIntervals.loadInterval(item)">
         <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
                 <h3 class="text-sm font-medium truncate">{{ item.name }}</h3>
@@ -89,7 +73,10 @@ const remove = () => savedIntervals.removeInterval(item.id)
                 </span>
             </div>
 
-            <div @click.stop>
+            <div class="flex gap-1" @click.stop>
+                <UButton icon="i-lucide-pencil" color="neutral" variant="ghost" size="xs"
+                    @click="savedIntervals.openModal(item)" />
+
                 <UPopover :ui="{ content: 'p-3 flex flex-col gap-2' }">
                     <UButton icon="i-lucide-trash-2" color="error" variant="ghost" size="xs" />
 
@@ -105,8 +92,7 @@ const remove = () => savedIntervals.removeInterval(item.id)
         </div>
 
         <div class="flex flex-wrap gap-1">
-            <UKbd v-for="badge in badges" :key="badge.code" size="md"
-                :style="badgeStyle(badge.code, badge.value)">
+            <UKbd v-for="badge in badges" :key="badge.code" size="md" :style="badgeStyle(badge)">
                 {{ badge.label }} {{ badge.value }} {{ badge.units }}
             </UKbd>
 
@@ -114,6 +100,10 @@ const remove = () => savedIntervals.removeInterval(item.id)
                 Инверсия {{ inversion }} °C
             </UKbd>
         </div>
+
+        <p v-if="item.description" class="text-muted text-xs whitespace-pre-wrap">
+            {{ item.description }}
+        </p>
     </div>
 </template>
 

@@ -19,8 +19,6 @@ export const statsByHour = (setData: SiteData[], indicators: Indicator[]) => {
             let sum = 0
             let min = Infinity
             let max = -Infinity
-            let minSite: number | null = null
-            let maxSite: number | null = null
 
             hour.forEach(g => {
                 const raw = g[code]!
@@ -30,11 +28,9 @@ export const statsByHour = (setData: SiteData[], indicators: Indicator[]) => {
                 sum += v
                 if (v < min) {
                     min = v
-                    minSite = g.site
                 }
                 if (v > max) {
                     max = v
-                    maxSite = g.site
                 }
             })
 
@@ -44,9 +40,7 @@ export const statsByHour = (setData: SiteData[], indicators: Indicator[]) => {
                 avg: sum / hour.length,
                 min,
                 max,
-                count: hour.length,
-                minSite,
-                maxSite
+                count: hour.length
             }
         }
     })

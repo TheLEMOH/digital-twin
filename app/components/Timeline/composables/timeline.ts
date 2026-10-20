@@ -18,9 +18,7 @@ export function createPoints(points: string[], backgrounds: any, indicator: Indi
             value: background.value,
             min: stat?.min,
             max: stat?.max,
-            count: stat?.count,
-            minSite: stat?.minSite ?? null,
-            maxSite: stat?.maxSite ?? null
+            count: stat?.count
         }
     })
 }
