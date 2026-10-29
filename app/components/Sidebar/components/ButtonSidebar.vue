@@ -1,12 +1,17 @@
 <script setup lang="ts">
 
-const open = inject<Ref<boolean>>('isOpenSidebar')
+const open = inject<Ref<boolean>>('isOpenSidebar')!
 
 </script>
 
 <template>
     <div class="sibebarButton">
-        <UButton @click="open = true" icon="i-lucide-menu"></UButton>
+        <UButton
+            :icon="open ? 'i-lucide-x' : 'i-lucide-menu'"
+            :aria-label="open ? 'Закрыть меню' : 'Открыть меню'"
+            :title="open ? 'Закрыть меню' : 'Открыть меню'"
+            @click="open = !open"
+        />
     </div>
 </template>
 

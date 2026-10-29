@@ -11,7 +11,6 @@ import ButtonSidebar from '~/components/Sidebar/components/ButtonSidebar.vue';
 import Sidebar from '~/components/Sidebar/components/Sidebar.vue';
 import usePolygons from '~/components/Map/composables/useFill';
 import useFillExtrusion from '~/components/Map/composables/useFillExtrusion';
-import useVoronoi from '~/components/Map/composables/useVoronoi';
 import useDeckGL from '~/components/Map/composables/useDeckGL';
 import useExistDates from '~/composables/useExistDate';
 import useDataGroupedBySite from '~/composables/useDataGroupedBySite';
@@ -41,8 +40,6 @@ const { selectedDate, selectedDates } = useDates()
 const { selectedSiteGroup } = useSiteSettings()
 
 const savedIntervals = useSavedIntervals({ selectedDates, selectedSiteGroup, selectedIndicator })
-
-const featureKey = computed(() => { return selectedFeature?.value?.properties.id })
 
 const { sites, features, setData, filteredSetData, indicators, avgByDate, statsByDate, loading } = await useSite({ selectedDate, selectedDates, selectedSiteGroup })
 const { selectedTiffIndicator, tiffOpacity, selectedBand, tiffFilterRange } = useTiffSettings()
@@ -86,21 +83,39 @@ provide('avgByDate', avgByDate)
 <template>
     <Progress v-if="loading"></Progress>
 
-    <BackButton></BackButton>
-    <Map></Map>
-    <Indicators :items="indicators"></Indicators>
-    <Legend></Legend>
-    <Timeline :items="existDate" :avg="avgByDate" :stats="statsByDate"></Timeline>
+    <div class="screen">
+        <div class="map-pane">
+            <BackButton></BackButton>
+            <Map></Map>
+            <Indicators :items="indicators"></Indicators>
+            <Legend></Legend>
+            <Timeline :items="existDate" :avg="avgByDate" :stats="statsByDate"></Timeline>
 
-    <SiteDialog v-if="selectedFeature" :key="featureKey"></SiteDialog>
-    <!--  <SiteSlider v-if="selectedFeature" :key="selectedFeature"> </SiteSlider> -->
+            <SiteDialog v-if="selectedFeature"></SiteDialog>
 
-    <ProfilerDialog></ProfilerDialog>
+            <ProfilerDialog></ProfilerDialog>
 
-    <!--   <Dialog></Dialog> -->
+            <!--   <Dialog></Dialog> -->
 
-    <ButtonSidebar></ButtonSidebar>
-    <Sidebar></Sidebar>
+            <ButtonSidebar></ButtonSidebar>
+        </div>
+
+        <Sidebar></Sidebar>
+    </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.screen {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.map-pane {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+}
+</style>

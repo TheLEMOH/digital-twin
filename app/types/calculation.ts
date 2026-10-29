@@ -33,7 +33,8 @@ export type Calculation = {
     siteGroup?: string[],
     indicator?: Indicator,
     inversion?: Inversion,
-    meteo?: MeteoSummary[]
+    meteo?: MeteoSummary[],
+    summary?: string
 }
 
 export type SavedInterval = Omit<Calculation, 'inversion'> & {

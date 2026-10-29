@@ -1,7 +1,9 @@
 import { CalendarDate } from '@internationalized/date'
 import { air, monitoring, profiler } from '~/core/data/register'
 import { avgByPeriod } from '~/core/avg/avgByPeriod'
+import { siteFilter } from '~/core/filters/siteFilter'
 import { analyzeInversions } from '~/core/profiler/inversion'
+import { buildIntervalSummary, loadHourlyAirData } from '~/core/summary'
 import type { SavedInterval, MeteoSummary } from '~/types/calculation'
 import type SelectedDates from '~/types/selectedDates'
 import type Indicator from '~/types/indicator'
@@ -56,10 +58,11 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
         persist()
     }
 
-    const computeStats = async (dateFrom: string, dateTo: string, indicator?: Indicator) => {
-        const { indicators } = await air.getDta()
+    const computeStats = async (dateFrom: string, dateTo: string, indicator?: Indicator, siteGroup: string[] = []) => {
+        const { sites, indicators } = await air.getDta()
+        const selectedSites = siteGroup.length ? siteFilter(sites, siteGroup) : sites
         const [data, profilerData] = await Promise.all([
-            air.getData({ begin: dateFrom, end: dateTo, timeInterval: 'day' }),
+            loadHourlyAirData(selectedSites.map(site => site.id), dateFrom, dateTo),
             profiler.getDataBySite({ begin: dateFrom, end: dateTo, timeInterval: 'day' })
         ])
         const statsIndicators = indicator?.code
@@ -74,13 +77,20 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
         }
     }
 
+    const computeSummary = (dateFrom: string, dateTo: string, siteGroup: string[] = [], fallback = '') =>
+        buildIntervalSummary(dateFrom, dateTo, siteGroup).catch(() => fallback)
+
     const addInterval = async (payload: SavedIntervalPayload) => {
         loadingStats.value = true
 
         try {
             const groups = payload.siteGroup ?? (selectedSiteGroup ? [...selectedSiteGroup.value] : [])
             const indicator = payload.indicator ?? (selectedIndicator ? { ...selectedIndicator.value } : undefined)
-            const { meteo, inversion } = await computeStats(payload.dateFrom, payload.dateTo, indicator)
+            const [stats, summary] = await Promise.all([
+                computeStats(payload.dateFrom, payload.dateTo, indicator, groups),
+                computeSummary(payload.dateFrom, payload.dateTo, groups)
+            ])
+            const { meteo, inversion } = stats
 
             const item: SavedInterval = {
                 id: `interval-${Date.now()}`,
@@ -92,7 +102,8 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
                 siteGroup: groups,
                 indicator,
                 meteo,
-                inversion
+                inversion,
+                summary
             }
 
             intervals.value = [item, ...intervals.value]
@@ -119,16 +130,22 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
             ? existing.meteo?.filter(item => item.code === indicatorCode)
             : existing.meteo
         const statsChanged = datesChanged || groupChanged || indicatorChanged || (!!indicatorCode && !cachedMeteo?.length)
+        const summaryChanged = datesChanged || groupChanged || !existing.summary
 
         loadingStats.value = true
 
         try {
-            const stats = statsChanged
-                ? await computeStats(payload.dateFrom, payload.dateTo, nextIndicator)
-                : {
-                    meteo: cachedMeteo,
-                    inversion: existing.inversion
-                }
+            const [stats, summary] = await Promise.all([
+                statsChanged
+                    ? computeStats(payload.dateFrom, payload.dateTo, nextIndicator, nextGroup)
+                    : Promise.resolve({
+                        meteo: cachedMeteo,
+                        inversion: existing.inversion
+                    }),
+                summaryChanged
+                    ? computeSummary(payload.dateFrom, payload.dateTo, nextGroup, existing.summary ?? '')
+                    : Promise.resolve(existing.summary ?? '')
+            ])
 
             intervals.value = intervals.value.map(item => item.id === id
                 ? {
@@ -140,7 +157,8 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
                     siteGroup: nextGroup,
                     indicator: nextIndicator,
                     meteo: stats.meteo,
-                    inversion: stats.inversion
+                    inversion: stats.inversion,
+                    summary
                 }
                 : item)
 

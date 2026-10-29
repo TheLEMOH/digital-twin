@@ -13,18 +13,46 @@ export default function useSiteDialog() {
     const selectedFeature = inject<ShallowRef<Feature>>('selectedFeature')
     const selectedIndicator = inject<ShallowRef<Indicator>>('selectedIndicator')
     const selectedDates = inject<ShallowRef<{ start: CalendarDate, end: CalendarDate }>>('selectedDates')
+    const isOpenDialog = inject<Ref<boolean>>('isOpenDialog')
     const indicators = inject<Indicator[]>('indicators')
     const sites = inject<ShallowRef<Site[]>>('sites')!
 
     const timePeriod = shallowRef<{ start: CalendarDate, end: CalendarDate }>({ ...selectedDates!.value })
 
+    watch(selectedDates!, (value) => {
+        timePeriod.value = value
+    })
+
+    watch(isOpenDialog!, (isOpen) => {
+        if (isOpen) {
+            timePeriod.value = selectedDates!.value
+        }
+    })
+
+    const setTimePeriod = (value: { start: CalendarDate, end: CalendarDate }) => {
+        timePeriod.value = value
+    }
+
     const value = shallowRef<string[]>([selectedIndicator?.value.code || 'm-t'])
+
+    watch(selectedIndicator!, (indicator) => {
+        if (indicator?.code) {
+            value.value = [indicator.code]
+        }
+    })
 
     const siteData = shallowRef<Site[]>([])
     const selectedSites = ref<number[]>([])
     const mode = ref<string>('default')
 
     selectedSites.value.push(selectedFeature?.value.properties.id)
+
+    watch(() => selectedFeature?.value?.properties.id, (id) => {
+        if (id != null) {
+            selectedSites.value = [id]
+            timePeriod.value = selectedDates!.value
+        }
+    })
 
     const selectedChartStrategy = computed(() => chartStrategies[mode.value] || chartStrategies['default'])
     const selectedDataStrategy = computed(() => dataStrategies[mode.value] || dataStrategies['default'])
@@ -87,5 +115,5 @@ export default function useSiteDialog() {
         }).then(r => siteData.value = r)
     })
 
-    return { selectedFeature, timePeriod, chartData, selectedIndicator, value, lastData, selectedSites, mode }
+    return { selectedFeature, timePeriod, setTimePeriod, chartData, selectedIndicator, value, lastData, selectedSites, mode }
 }

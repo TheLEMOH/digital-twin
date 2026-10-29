@@ -10,6 +10,6 @@ import "maplibre-gl/dist/maplibre-gl.css";
 <style scoped>
 .map {
     width: 100%;
-    height: 100vh;
+    height: 100%;
 }
 </style>

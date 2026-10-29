@@ -39,7 +39,7 @@ const scheme: Ref<[number, string]> = useLegend()
     margin: 0.5rem;
     background: rgba(0, 0, 0, 0.3);
     z-index: 1;
-    bottom: 58px;
+    bottom: calc(var(--timeline-height) + 2px);
     right: 0px;
 }
 </style>

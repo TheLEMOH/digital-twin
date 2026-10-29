@@ -97,8 +97,8 @@ const setValidValue = () => {
 .timeline {
     position: absolute;
     display: flex;
-    background: #fff;
-    height: 56px;
+    background: var(--ui-bg);
+    height: var(--timeline-height);
     width: 100%;
     padding: 0.25rem 0.75rem;
     bottom: 0;
@@ -106,7 +106,7 @@ const setValidValue = () => {
     align-items: center;
     flex-direction: row;
     gap: 1rem;
-    border-top: 1px solid #e5e5e5;
+    border-top: 1px solid var(--ui-border);
 }
 
 .timeline-body {
@@ -120,12 +120,12 @@ const setValidValue = () => {
 
 .line {
     position: absolute;
-    top: 7px;
+    top: 11px;
     width: 100%;
     right: 50%;
     transform: translate(50%, 0);
     height: 3px;
     z-index: 0;
-    background: #ddd;
+    background: var(--ui-bg-accented);
 }
 </style>

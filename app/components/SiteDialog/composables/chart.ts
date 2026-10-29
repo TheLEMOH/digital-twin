@@ -72,7 +72,6 @@ export class DefaultStrategy implements ChartStrategy {
 export class AvgStrategy implements ChartStrategy {
     createChart({ siteData, indicator, indexY, code }: Props): SeriesOption[] {
         const pointsPerSite = siteData.map(site => toChartPoints(site.data, code));
-
         return [createLine({
             name: indicator.name ?? "",
             data: calculateHourlyAverage(pointsPerSite),

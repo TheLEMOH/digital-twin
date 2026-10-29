@@ -56,7 +56,7 @@ const value = computed({
 .indicators {
     display: flex;
     position: absolute;
-    bottom: 58px;
+    bottom: calc(var(--timeline-height) + 2px);
     z-index: 2;
     padding: 0.5rem;
     gap: 5px;

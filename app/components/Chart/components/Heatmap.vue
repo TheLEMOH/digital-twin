@@ -1,50 +1,18 @@
 <script setup>
 import * as echarts from 'echarts/core';
-import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, VisualMapComponent, MarkLineComponent } from 'echarts/components';
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, VisualMapComponent } from 'echarts/components';
 import { LineChart, HeatmapChart } from 'echarts/charts';
 import { UniversalTransition } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
 
-echarts.use([TitleComponent, GridComponent, LineChart, CanvasRenderer, LegendComponent, UniversalTransition, TooltipComponent, VisualMapComponent, HeatmapChart, MarkLineComponent]);
+echarts.use([TitleComponent, GridComponent, LineChart, CanvasRenderer, LegendComponent, UniversalTransition, TooltipComponent, VisualMapComponent, HeatmapChart]);
 
 const { series, selectedTime } = defineProps(['series', 'selectedTime'])
 
 const emit = defineEmits(['click'])
 
-function makeMarkLine(time) {
-    if (!time) return [];
-    return [{
-        xAxis: time,
-        lineStyle: {
-            color: '#cccccc',
-            width: 2,
-            type: 'dashed'
-        },
-        label: {
-            show: true,
-            formatter: '{b}',
-            position: 'insideEndTop',
-            color: '#d33',
-            fontSize: 10
-        }
-    }];
-}
-
-function applyMarkLine(seriesValue, time) {
-    const mark = makeMarkLine(time)
-    return seriesValue.map((s, i) => ({ ...s, id: `inv-series-${i}`, markLine: mark.length ? { symbol: 'none', data: mark } : undefined }))
-}
-
-function markLineOnly(time) {
-    const mark = makeMarkLine(time)
-    if (!mark.length) return []
-    return series.map((s, i) => ({
-        id: `inv-series-${i}`,
-        markLine: { symbol: 'none', data: mark }
-    }))
-}
-
 const ctx = useTemplateRef('chart')
+const marker = useTemplateRef('marker')
 
 onMounted(() => {
     const myChart = echarts.init(ctx.value);
@@ -57,7 +25,13 @@ onMounted(() => {
             transitionDuration: 0,
             position: (point, params, dom, rect, size) => {
                 const [w, h] = size.contentSize;
-                return [point[0] + 14, size.viewSize[1] - h - 28];
+                const [viewWidth, viewHeight] = size.viewSize;
+                const gap = 14;
+                const left = point[0] + gap + w > viewWidth
+                    ? Math.max(0, point[0] - w - gap)
+                    : point[0] + gap;
+
+                return [left, viewHeight - h - 28];
             },
             textStyle: { fontSize: 12 },
             formatter: (p) => {
@@ -125,10 +99,29 @@ onMounted(() => {
             }
         },
 
-        series: applyMarkLine(series, selectedTime)
+        series
     };
 
     myChart.setOption(option)
+
+    function updateMarker(time) {
+        const element = marker.value
+        if (!element) return
+
+        if (!time) {
+            element.style.display = 'none'
+            return
+        }
+
+        const x = myChart.convertToPixel({ xAxisIndex: 0 }, time)
+        if (!Number.isFinite(x)) {
+            element.style.display = 'none'
+            return
+        }
+
+        element.style.display = 'block'
+        element.style.left = `${x}px`
+    }
 
     myChart.getZr().on('click', (params) => {
         const pointInPixel = [params.offsetX, params.offsetY];
@@ -142,22 +135,22 @@ onMounted(() => {
     })
 
     watch(() => series, (value) => {
-        myChart.setOption({ animation: false, series: applyMarkLine(value, selectedTime) })
+        myChart.setOption({ animation: false, series: value })
+        updateMarker(selectedTime)
     })
 
     watch(() => selectedTime, (value) => {
-        const updates = markLineOnly(value)
-        if (updates.length) {
-            myChart.setOption({ animation: false, series: updates })
-        }
+        updateMarker(value)
     })
 
     const handleResize = () => {
         myChart?.resize();
+        updateMarker(selectedTime);
     };
 
     const resizeObserver = new ResizeObserver(() => handleResize());
     resizeObserver.observe(ctx.value);
+    updateMarker(selectedTime);
 
     onUnmounted(() => {
         resizeObserver.disconnect();
@@ -167,13 +160,30 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="chart" ref="chart"></div>
+    <div class="chart-wrap">
+        <div class="chart" ref="chart"></div>
+        <div v-show="selectedTime" class="marker" ref="marker"></div>
+    </div>
 </template>
 
 <style scoped>
+.chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
 .chart {
     width: 100%;
     height: 100%;
+}
 
+.marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 2px dashed #cccccc;
+    pointer-events: none;
 }
 </style>

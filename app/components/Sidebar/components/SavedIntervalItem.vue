@@ -104,6 +104,11 @@ const remove = () => savedIntervals.removeInterval(item.id)
         <p v-if="item.description" class="text-muted text-xs whitespace-pre-wrap">
             {{ item.description }}
         </p>
+
+        <details v-if="item.summary" class="summary" @click.stop>
+            <summary class="summary__toggle">Текстовая сводка</summary>
+            <p class="summary__text">{{ item.summary }}</p>
+        </details>
     </div>
 </template>
 
@@ -125,5 +130,25 @@ const remove = () => savedIntervals.removeInterval(item.id)
 
 .saved-interval--active {
     border-color: var(--ui-primary);
+}
+
+.summary {
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--ui-border);
+}
+
+.summary__toggle {
+    color: var(--ui-text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.summary__text {
+    margin-top: 0.5rem;
+    color: var(--ui-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: pre-line;
 }
 </style>

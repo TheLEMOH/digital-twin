@@ -31,14 +31,14 @@ const { item } = defineProps<Props>()
 
 .point-text {
     font-weight: 500;
-    color: #000;
+    color: var(--ui-text-muted);
     margin-top: 0.15rem;
 }
 
 .point-circle {
     width: 2px;
     height: 12px;
-    background: #000;
+    background: var(--ui-text-muted);
     border: none;
     border-radius: 2px;
 }

@@ -66,12 +66,27 @@ const heightMap: Record<DepthKey, number> = {
 
 const depthKeys = Object.keys(heightMap) as DepthKey[];
 const sortedDepthKeys = depthKeys.slice().sort((a, b) => heightMap[a] - heightMap[b]);
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isLongRange(data: DataItem[]): boolean {
+    if (data.length < 2) return false;
+
+    const first = new Date(String(data[0]!.time).replace(' ', 'T')).getTime();
+    const last = new Date(String(data[data.length - 1]!.time).replace(' ', 'T')).getTime();
+
+    if (!Number.isFinite(first) || !Number.isFinite(last)) return false;
+
+    return last - first > WEEK_MS;
+}
 
 export function createProfilerChart(data: DataItem[]): SeriesOption[] {
+    const showSymbol = !isLongRange(data);
+
     return depthKeys.map(key => ({
         name: heightMap[key] + ' м',
         type: 'line',
         data: data.map((item): [string, number] => [item.time, item[key]]),
+        showSymbol,
         symbolSize: 3
     }));
 }
@@ -79,6 +94,7 @@ export function createProfilerChart(data: DataItem[]): SeriesOption[] {
 export function createInversionChart(data: DataItem[]): SeriesOption[] {
     const heatmapData: [string, number, number | null][] = [];
     const lineData: [string, number | null][] = [];
+    const showSymbol = !isLongRange(data);
 
     data.forEach(item => {
         const timeMs = item.time;
@@ -105,6 +121,7 @@ export function createInversionChart(data: DataItem[]): SeriesOption[] {
             name: 'Сумма инверсии',
             type: 'line',
             yAxisIndex: 1,
+            showSymbol,
             symbolSize: 4,
             lineStyle: {
                 width: 2,

@@ -42,8 +42,10 @@ const view = computed(() => {
     <UTooltip :content="{ side: 'top' }" :ui="{ content: 'h-auto items-stretch py-1.5 pointer-events-none' }" :delay-duration="0" arrow>
         <div :class="[isSelected ? 'selected' : '', 'point']" @click="emits('onClick')">
             <div :class="['point-circle']" :style="{ background: item.background }">
-                <i v-if="isWindDirection && item.value !== undefined && item.value !== null" class="i-lucide-navigation wind-arrow"
-                    :style="{ transform: `rotate(${arrowAngle}deg)` }"></i>
+                <span v-if="isWindDirection && item.value !== undefined && item.value !== null" class="wind-arrow"
+                    :style="{ transform: `rotate(${arrowAngle}deg)` }">
+                    <UIcon name="i-lucide-arrow-up" />
+                </span>
             </div>
             <div class="point-text text-sm">
                 {{ view }}
@@ -105,9 +107,9 @@ const view = computed(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75em;
+    font-size: 1em;
     color: #fff;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 1);
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
     transform-origin: center;
     pointer-events: none;
 }
@@ -124,7 +126,7 @@ const view = computed(() => {
 
 .point-text {
     text-align: center;
-    color: #000;
+    color: var(--ui-text);
     margin-top: 0.2rem;
     font-variant-numeric: tabular-nums;
 }
@@ -138,20 +140,20 @@ const view = computed(() => {
 }
 
 .selected .point-circle {
-    box-shadow: 0 0 0 2px #1d4ed8;
+    box-shadow: 0 0 0 2px var(--ui-primary);
     transform: scale(1.2);
 }
 
 .selected .point-text {
     font-weight: 600;
-    color: #000;
+    color: var(--ui-text-highlighted);
 }
 
 .point-circle {
     position: relative;
-    width: 18px;
-    height: 18px;
-    border: 2px solid #000;
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--ui-text);
     border-radius: 50%;
     display: flex;
     align-items: center;
