@@ -4,12 +4,32 @@ import { avgByPeriod } from '~/core/avg/avgByPeriod'
 import { siteFilter } from '~/core/filters/siteFilter'
 import { analyzeInversions } from '~/core/profiler/inversion'
 import { buildIntervalSummary, loadHourlyAirData } from '~/core/summary'
+import type { IntervalSummary } from '~/core/summary'
 import type { SavedInterval, MeteoSummary } from '~/types/calculation'
 import type SelectedDates from '~/types/selectedDates'
 import type Indicator from '~/types/indicator'
 import type { ShallowRef } from 'vue'
 
 const STORAGE_KEY = 'digital-twin:saved-intervals'
+const PROFILER_MARKER = 'Температурный профиль (МТП-5):'
+
+const splitLegacySummary = (value?: string): IntervalSummary => {
+    if (!value) return { summary: '', profilerSummary: '' }
+
+    const markerIndex = value.indexOf(PROFILER_MARKER)
+    if (markerIndex === -1) return { summary: value, profilerSummary: '' }
+
+    const before = value.slice(0, markerIndex).trimEnd()
+    const tail = value.slice(markerIndex)
+    const sourceIndex = tail.indexOf('\n\nИсточник:')
+    const profilerPart = sourceIndex === -1 ? tail : tail.slice(0, sourceIndex)
+    const source = sourceIndex === -1 ? '' : tail.slice(sourceIndex).trim()
+
+    return {
+        summary: source ? `${before}\n\n${source}` : before,
+        profilerSummary: profilerPart.trim()
+    }
+}
 
 export type SavedIntervalPayload = {
     name: string
@@ -46,10 +66,14 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
         try {
             const saved = JSON.parse(raw) as SavedInterval[]
             intervals.value = saved.map(item => {
-                const code = item.indicator?.code
-                if (!code || !item.meteo) return item
+                const summaries = item.profilerSummary
+                    ? { summary: item.summary ?? '', profilerSummary: item.profilerSummary }
+                    : splitLegacySummary(item.summary)
+                const next = { ...item, ...summaries }
+                const code = next.indicator?.code
+                if (!code || !next.meteo) return next
 
-                return { ...item, meteo: item.meteo.filter(meteo => meteo.code === code) }
+                return { ...next, meteo: next.meteo.filter(meteo => meteo.code === code) }
             })
         } catch {
             intervals.value = []
@@ -77,8 +101,12 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
         }
     }
 
-    const computeSummary = (dateFrom: string, dateTo: string, siteGroup: string[] = [], fallback = '') =>
-        buildIntervalSummary(dateFrom, dateTo, siteGroup).catch(() => fallback)
+    const computeSummary = (
+        dateFrom: string,
+        dateTo: string,
+        siteGroup: string[] = [],
+        fallback: IntervalSummary = { summary: '', profilerSummary: '' }
+    ) => buildIntervalSummary(dateFrom, dateTo, siteGroup).catch(() => fallback)
 
     const addInterval = async (payload: SavedIntervalPayload) => {
         loadingStats.value = true
@@ -103,7 +131,8 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
                 indicator,
                 meteo,
                 inversion,
-                summary
+                summary: summary.summary,
+                profilerSummary: summary.profilerSummary
             }
 
             intervals.value = [item, ...intervals.value]
@@ -130,7 +159,7 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
             ? existing.meteo?.filter(item => item.code === indicatorCode)
             : existing.meteo
         const statsChanged = datesChanged || groupChanged || indicatorChanged || (!!indicatorCode && !cachedMeteo?.length)
-        const summaryChanged = datesChanged || groupChanged || !existing.summary
+        const summaryChanged = datesChanged || groupChanged || !existing.summary || !existing.profilerSummary
 
         loadingStats.value = true
 
@@ -143,8 +172,14 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
                         inversion: existing.inversion
                     }),
                 summaryChanged
-                    ? computeSummary(payload.dateFrom, payload.dateTo, nextGroup, existing.summary ?? '')
-                    : Promise.resolve(existing.summary ?? '')
+                    ? computeSummary(payload.dateFrom, payload.dateTo, nextGroup, {
+                        summary: existing.summary ?? '',
+                        profilerSummary: existing.profilerSummary ?? ''
+                    })
+                    : Promise.resolve({
+                        summary: existing.summary ?? '',
+                        profilerSummary: existing.profilerSummary ?? ''
+                    })
             ])
 
             intervals.value = intervals.value.map(item => item.id === id
@@ -158,7 +193,8 @@ export default function useSavedIntervals({ selectedDates, selectedSiteGroup, se
                     indicator: nextIndicator,
                     meteo: stats.meteo,
                     inversion: stats.inversion,
-                    summary
+                    summary: summary.summary,
+                    profilerSummary: summary.profilerSummary
                 }
                 : item)
 

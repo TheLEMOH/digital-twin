@@ -1,5 +1,6 @@
 import { air, profiler } from '~/core/data/register'
 import { siteFilter } from '~/core/filters/siteFilter'
+import { buildProfilerSummary } from '~/core/profiler/summary'
 import { SITE_GROUPS } from '~/core/siteGroups'
 import type SiteData from '~/types/siteData'
 import { aggregateInterval, listDates } from './aggregate'
@@ -43,18 +44,23 @@ async function loadProfilerData(dates: string[]): Promise<ProfilerRow[]> {
     return parts.flat()
 }
 
-export async function buildIntervalSummary(dateFrom: string, dateTo: string, siteGroup: string[] = []): Promise<string> {
+export type IntervalSummary = {
+    summary: string
+    profilerSummary: string
+}
+
+export async function buildIntervalSummary(dateFrom: string, dateTo: string, siteGroup: string[] = []): Promise<IntervalSummary> {
     const dates = listDates(dateFrom, dateTo)
 
     if (!dates.length) {
-        return 'Не удалось построить сводку: некорректный период.'
+        return { summary: 'Не удалось построить сводку: некорректный период.', profilerSummary: '' }
     }
 
     const { sites } = await air.getDta()
     const selectedSites = siteGroup.length ? siteFilter(sites, siteGroup) : sites
 
     if (!selectedSites.length) {
-        return 'Не удалось построить сводку: нет станций.'
+        return { summary: 'Не удалось построить сводку: нет станций.', profilerSummary: '' }
     }
 
     const groupLabel = siteGroup.length
@@ -66,5 +72,13 @@ export async function buildIntervalSummary(dateFrom: string, dateTo: string, sit
         loadProfilerData(dates),
     ])
 
-    return renderIntervalSummary(aggregateInterval(data, selectedSites, dates, profilerData), dateFrom, dateTo, groupLabel)
+    return {
+        summary: renderIntervalSummary(
+            aggregateInterval(data, selectedSites, dates, profilerData),
+            dateFrom,
+            dateTo,
+            groupLabel,
+        ),
+        profilerSummary: buildProfilerSummary(profilerData),
+    }
 }

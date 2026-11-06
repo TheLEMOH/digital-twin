@@ -51,6 +51,12 @@ function percent(value: number): string {
     return `${Math.round(value * 100)}%`
 }
 
+const NO_BREAK_UNITS = /(\d)[ \t]+(°C\/100 м|мкг\/м³|м\/с|°C|%|м|ч)(?=[\s,;.)]|$)/g
+
+function noBreakUnits(value: string): string {
+    return value.replace(NO_BREAK_UNITS, '$1\u00A0$2')
+}
+
 function parseDate(value: string): [number, number, number] {
     const [year, month, day] = value.split('-').map(Number)
     return [year ?? 0, month ?? 1, day ?? 1]
@@ -165,23 +171,6 @@ function renderHalf(summary: HalfSummary): string {
     }
 
     return parts.join('; ')
-}
-
-function renderInversionPeriod(inversion: InversionSummary): string[] {
-    if (inversion.surfaceAvgIntensity === null || inversion.surfaceAvgIntensity <= 1) {
-        return []
-    }
-
-    const lines = [
-        'Температурные инверсии (профилемер):',
-        `в приземном слое (до 150 м): в среднем ${number(inversion.surfaceAvgIntensity)} °C.`,
-    ]
-
-    if (inversion.fullAvgIntensity !== null) {
-        lines.push(`по всему профилю (до 1000 м): в среднем ${number(inversion.fullAvgIntensity)} °C.`)
-    }
-
-    return lines
 }
 
 function renderInversionHalf(inversion: InversionStats): string {
@@ -305,8 +294,6 @@ function renderPeriodSummary(data: IntervalSummaryData): string[] {
         lines.push(`${wind}.`)
     }
 
-    lines.push(...renderInversionPeriod(data.inversion))
-
     return lines
 }
 
@@ -360,7 +347,7 @@ export function renderIntervalSummary(data: IntervalSummaryData, dateFrom: strin
 
     lines.push(...renderComparison(data.daily, data.inversion))
     lines.push('')
-    lines.push(`Источник: почасовые данные станций (${groupLabel}); PM2.5 — по всем станциям группы, температура и ветер — по станциям с соответствующими датчиками; инверсии — по профилемеру.`)
+    lines.push(`Источник: почасовые данные станций (${groupLabel}); PM2.5 — по всем станциям группы, температура и ветер — по станциям с соответствующими датчиками; инверсии — по часовым данным профилемера МТП-5.`)
 
-    return lines.join('\n')
+    return noBreakUnits(lines.join('\n'))
 }

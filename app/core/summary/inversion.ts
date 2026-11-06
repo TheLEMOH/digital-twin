@@ -1,16 +1,7 @@
+import { PROFILER_LEVELS as LEVELS, PROFILER_SURFACE_TOP as SURFACE_TOP, type ProfilerRow } from '~/core/profiler/data'
 import type { InversionLayer, InversionProfile, InversionStats, InversionSummary } from './types'
 
-export type ProfilerRow = {
-    time: string
-    [key: string]: string | number | undefined
-}
-
-const HEIGHTS = [0, 25, 50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000]
-const LEVELS = HEIGHTS.map(height => ({
-    height,
-    key: `t_h${height.toString().padStart(4, '0')}`,
-}))
-const SURFACE_TOP = 150
+export type { ProfilerRow } from '~/core/profiler/data'
 
 type Segment = {
     lower: number

@@ -32,6 +32,15 @@ const days = computed(() =>
     Math.floor((new Date(item.dateTo).getTime() - new Date(item.dateFrom).getTime()) / DAY_MS) + 1
 )
 
+const NO_BREAK_UNITS = /(\d)[ \t]+(°C\/100 м|мкг\/м³|м\/с|°C|%|м|ч)(?=[\s,;.)]|$)/g
+
+const noBreakUnits = (value?: string) => (value ?? '').replace(NO_BREAK_UNITS, '$1\u00A0$2')
+
+const splitSummary = (value?: string) => noBreakUnits(value).split('\n')
+
+const summaryLines = computed(() => splitSummary(item.summary))
+const profilerSummaryLines = computed(() => splitSummary(item.profilerSummary))
+
 const inversion = computed(() => {
     const value = Number(item.inversion ?? 0)
     return +value.toFixed(2)
@@ -107,7 +116,18 @@ const remove = () => savedIntervals.removeInterval(item.id)
 
         <details v-if="item.summary" class="summary" @click.stop>
             <summary class="summary__toggle">Текстовая сводка</summary>
-            <p class="summary__text">{{ item.summary }}</p>
+            <div class="summary__text">
+                <p v-for="(line, index) in summaryLines" :key="index" class="summary__line"
+                    :class="{ 'summary__line--empty': !line }">{{ line }}</p>
+            </div>
+        </details>
+
+        <details v-if="item.profilerSummary" class="summary" @click.stop>
+            <summary class="summary__toggle">Сводка по профилемеру</summary>
+            <div class="summary__text">
+                <p v-for="(line, index) in profilerSummaryLines" :key="index" class="summary__line"
+                    :class="{ 'summary__line--empty': !line }">{{ line }}</p>
+            </div>
         </details>
     </div>
 </template>
@@ -149,6 +169,14 @@ const remove = () => savedIntervals.removeInterval(item.id)
     color: var(--ui-text-muted);
     font-size: 0.75rem;
     line-height: 1.5;
-    white-space: pre-line;
+}
+
+.summary__line {
+    margin: 0;
+    text-wrap: pretty;
+}
+
+.summary__line--empty {
+    height: 0.75rem;
 }
 </style>
